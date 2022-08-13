@@ -98,6 +98,22 @@ db.getStatisticalReaders = () => {
     });
 }
 
+db.getTKReadersDate = (startDate, endDate) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT CONCAT(R.first_name, ' ', R.last_name) as name_reader, count(*) as amount_readers FROM book_borrow BB
+		INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow
+		INNER JOIN readers R ON R.id_readers = BB.id_readers
+		where BB.create_time::date BETWEEN $1::timestamp AND $2::timestamp
+		GROUP BY R.first_name, R.last_name
+		ORDER BY amount_readers DESC`,
+            [startDate, endDate],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
 db.getStatisticalReadersByDate = () => {
     return new Promise((resolve, reject) => {
         pool.query(`select distinct id_readers from book_borrow where TO_CHAR(current_timestamp:: date, 'dd/mm/yyyy') = TO_CHAR(create_time:: date, 'dd/mm/yyyy')`,
@@ -123,3 +139,11 @@ db.getStatisticalBookByDate = () => {
 }
 
 module.exports = db
+
+
+
+
+// SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  FROM borrow_details BD
+// INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+// INNER JOIN readers R ON R.id_readers = BB.id_readers
+// where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN '2022/08/12'::timestamp AND '2022/08/12'::timestamp

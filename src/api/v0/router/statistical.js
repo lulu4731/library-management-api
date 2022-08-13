@@ -70,12 +70,40 @@ router.get('/tk', Auth.authenAdmin, async (req, res, next) => {
 router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { startDate, endDate } = req.body
-        console.log(startDate)
+        // console.log(req.body)
         const data = await Statistical.getTKDate(startDate, endDate)
+
+        const category = await Statistical.getCategory()
+        // // const temps = category.map(item => item.name_category)
+        const categoryTK = [...new Set(category.map(item => item.name_category))]
+
+        const a = [...data, ...category]
+
+        let myArrayWithNoDuplicates = a.reduce(function (accumulator, element) {
+            // console.log(accumulator)
+            // console.log(1)
+            if (!accumulator.find((item => item.isbn === element.isbn))) {
+                accumulator.push(element)
+            }
+            return accumulator
+        }, [])
+
+        let list = []
+
+        for (let i of categoryTK) {
+            list.push(i)
+            for (let j of myArrayWithNoDuplicates) {
+                if (i === j.name_category) {
+                    list.push(j)
+                } else {
+
+                }
+            }
+        }
 
         return res.status(200).json({
             message: 'Lấy thống kê số lượng sách thành công',
-            data: data
+            data: list
         })
     } catch (error) {
         return res.sendStatus(500);
@@ -85,6 +113,30 @@ router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
 router.get('/readers', Auth.authenAdmin, async (req, res, next) => {
     try {
         const data = await Statistical.getStatisticalReaders()
+        const readers = await Statistical.getNameReader()
+
+        const list = [...data, ...readers]
+
+        let myArrayWithNoDuplicates = list.reduce(function (accumulator, element) {
+            if (!accumulator.find((item => item.name_reader === element.name_reader))) {
+                accumulator.push(element)
+            }
+            return accumulator
+        }, [])
+
+        return res.status(200).json({
+            message: 'Lấy thống kê số lượng sách thành công',
+            data: myArrayWithNoDuplicates
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
+router.post('/readers', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.body
+        const data = await Statistical.getTKReadersDate(startDate, endDate)
         const readers = await Statistical.getNameReader()
 
         const list = [...data, ...readers]
