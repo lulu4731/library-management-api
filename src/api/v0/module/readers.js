@@ -3,7 +3,7 @@ db = {}
 
 db.getAllReaders = () => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT * FROM readers",
+        pool.query("SELECT *, TO_CHAR(date_of_birth:: date, 'dd/mm/yyyy') as day FROM readers",
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);

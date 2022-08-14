@@ -83,6 +83,20 @@ db.getReaderBorrowExpired = () => {
     });
 }
 
+db.getReaderBorrowExpiredDate = (startDate, endDate) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  FROM borrow_details BD
+        INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+        INNER JOIN readers R ON R.id_readers = BB.id_readers
+        where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp`,
+            [startDate, endDate],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
 
 db.getStatisticalReaders = () => {
     return new Promise((resolve, reject) => {
@@ -143,7 +157,3 @@ module.exports = db
 
 
 
-// SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  FROM borrow_details BD
-// INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
-// INNER JOIN readers R ON R.id_readers = BB.id_readers
-// where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN '2022/08/12'::timestamp AND '2022/08/12'::timestamp

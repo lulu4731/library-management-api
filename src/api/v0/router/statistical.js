@@ -195,6 +195,20 @@ router.get('/readers/expired', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
+router.post('/readers/expired', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.body
+        const data = await Statistical.getReaderBorrowExpiredDate(startDate, endDate)
+
+        return res.status(200).json({
+            message: 'Lấy thống kê số độc giả quá hạn',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
 // router.get('/book', Auth.authenAdmin, async (req, res, next) => {
 //     try {
 //         const data = await Liquidation.getBookNotLiquidation()
