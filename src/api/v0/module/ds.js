@@ -101,4 +101,27 @@ db.hasDsById = (isbn) => {
     });
 }
 
+db.hasCategoryById = (id_category) => {
+    return new Promise((resolve, reject) => {
+        pool.query("SELECT * FROM ds WHERE id_category = $1",
+            [id_category],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            })
+    });
+}
+
+db.hasCompanyById = (id_publishing_company) => {
+    return new Promise((resolve, reject) => {
+        pool.query("SELECT * FROM ds WHERE id_publishing_company = $1",
+            [id_publishing_company],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            })
+    });
+}
+
+
 module.exports = db

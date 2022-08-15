@@ -46,12 +46,12 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                 })
             }
         } else {
-            res.status(400).json({
+            return res.status(400).json({
                 message: 'Thiếu dữ liệu để thêm nhà xuất bản'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
@@ -89,27 +89,58 @@ router.put('/:id_publishing_company', Auth.authenAdmin, async (req, res, next) =
                 const company = await Company.updateCompany(companyUpdate)
                 if (company) {
                     return res.status(200).json({
-                        message: 'Sửa nhà xuất bản thành công',
+                        message: 'Cập nhật nhà xuất bản thành công',
                         company: company
                     })
                 }
 
             } else {
                 return res.status(400).json({
-                    message: 'Tên nhà xuất bản không tồn tại'
+                    message: 'Nhà xuất bản không tồn tại'
                 })
             }
         } else {
-            res.status(400).json({
-                message: 'Thiếu dữ liệu để thêm nhà xuất bản'
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để cập nhật nhà xuất bản'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
 
-});
+})
+
+router.delete('/:id_publishing_company', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_publishing_company = req.params.id_publishing_company
+
+        const company = await Company.hasByCompany(id_publishing_company)
+        if (company) {
+            const companyDsExists = await DS.hasByCompanyById(id_publishing_company)
+
+            if (companyDsExists) {
+                return res.status(400).json({
+                    message: 'Nhà xuất bản đã thêm vào đầu sách không thể xóa'
+                })
+            } else {
+                await Company.deleteCompany(id_publishing_company)
+                return res.status(200).json({
+                    message: 'Xóa nhà xuất bản thành công'
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Nhà xuất bản không tồn tại'
+            })
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 module.exports = router

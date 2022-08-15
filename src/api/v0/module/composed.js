@@ -36,4 +36,15 @@ db.deleteComposed = (isbn) => {
     });
 }
 
+db.hasByComposedAuthor = (id_author) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM composed WHERE id_author = $1`,
+            [id_author],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            });
+    });
+}
+
 module.exports = db

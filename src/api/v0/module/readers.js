@@ -22,6 +22,17 @@ db.hasEmail = (email) => {
     })
 }
 
+db.hasCitizenIdentification = (citizen_identification) => {
+    return new Promise((resolve, reject) => {
+        pool.query("SELECT * FROM readers WHERE citizen_identification = $1",
+            [citizen_identification],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            })
+    })
+}
+
 db.add = (reader) => {
     return new Promise((resolve, reject) => {
         pool.query("INSERT INTO readers (first_name, last_name, address, gender, email, date_of_birth, phone, citizen_identification) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id_readers",
@@ -35,7 +46,7 @@ db.add = (reader) => {
 
 db.hasByReaders = (id_readers) => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT id_readers, email FROM readers WHERE id_readers = $1",
+        pool.query("SELECT id_readers, email, citizen_identification FROM readers WHERE id_readers = $1",
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
@@ -58,6 +69,17 @@ db.updateReaders = (reader) => {
 db.hasByReadersValue = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query("SELECT id_readers as value, CONCAT(first_name, ' ', last_name, ' ', '(' , email, ')') as label FROM readers WHERE id_readers = $1",
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
+db.deleteReaders = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM readers WHERE id_readers = $1",
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);

@@ -77,6 +77,17 @@ db.updateBorrowDetailsExpiredAndNumberRenewal = (borrowDetails) => {
     });
 }
 
+db.hasBorrowReaders = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM book_borrow
+		where id_readers = $1`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            });
+    });
+}
 
 db.hasByReadersBorrow = (id_readers) => {
     return new Promise((resolve, reject) => {
@@ -90,6 +101,7 @@ db.hasByReadersBorrow = (id_readers) => {
             });
     });
 }
+
 db.hasByExpiredBorrow = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT * FROM book_borrow BB

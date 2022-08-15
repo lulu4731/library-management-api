@@ -24,11 +24,11 @@ db.hasName = (name) => {
 
 db.addCategory = (name_category) => {
     return new Promise((resolve, reject) => {
-        pool.query("INSERT INTO category (name_category) VALUES ($1) RETURNING id_category",
+        pool.query("INSERT INTO category (name_category) VALUES ($1) RETURNING *",
             [name_category],
             (err, result) => {
                 if (err) return reject(err);
-                return resolve(result.rows[0].id_category);
+                return resolve(result.rows[0]);
             });
     });
 }
@@ -55,4 +55,14 @@ db.updateCategory = (name_category, id_category) => {
     });
 }
 
+db.deleteCategory = (id_category) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM category WHERE id_category = $1",
+            [id_category],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
 module.exports = db

@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Author = require('../module/authors')
 const Auth = require('../../../middleware/auth')
+const Composed = require('../module/composed')
 
 router.get('/', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -41,12 +42,12 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
             }
             // }
         } else {
-            res.status(400).json({
+            return res.status(400).json({
                 message: 'Thiếu dữ liệu để tạo tác giả'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
@@ -73,22 +74,53 @@ router.put('/:id_author', Auth.authenAdmin, async (req, res, next) => {
 
             if (author) {
                 return res.status(200).json({
-                    message: 'Sửa tác giả thành công',
+                    message: 'Cập nhật tác giả thành công',
                     data: author
                 })
             }
             // }
         } else {
-            res.status(400).json({
-                message: 'Thiếu dữ liệu để sửa tác giả'
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để cập nhật tác giả'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
 
-});
+})
+
+router.delete('/:id_author', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_author = req.params.id_author
+
+        const author = await Author.getByIdAuthor(id_author)
+        if (author) {
+            const authorDsExists = await Composed.hasByComposedAuthor(id_author)
+
+            if (authorDsExists) {
+                return res.status(400).json({
+                    message: 'Tác giả đã thêm vào đầu sách không thể xóa'
+                })
+            } else {
+                await Author.deleteAuthor(id_author)
+                return res.status(200).json({
+                    message: 'Xóa tác giả thành công'
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Tác giả không tồn tại'
+            })
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 module.exports = router

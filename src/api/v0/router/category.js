@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Category = require('../module/category')
 const Auth = require('../../../middleware/auth')
-
+const DS = require('../module/ds')
 
 router.get('/', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -15,6 +15,7 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { name_category } = req.body;
@@ -26,24 +27,21 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                     message: 'Trùng tên thể loại!'
                 })
             } else {
-                const id_category = await Category.addCategory(name_category)
-                if (id_category) {
+                const category = await Category.addCategory(name_category)
+                if (category) {
                     return res.status(201).json({
                         message: 'Thêm thể loại thành công',
-                        data: {
-                            ...category,
-                            id_category: id_category
-                        }
+                        data: category
                     })
                 }
             }
         } else {
-            res.status(400).json({
+            return res.status(400).json({
                 message: 'Thiếu dữ liệu để thêm thể loại'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
@@ -70,7 +68,7 @@ router.put('/:id_category', Auth.authenAdmin, async (req, res, next) => {
                 const category = await Category.updateCategory(name_category, id_category)
                 if (category) {
                     return res.status(200).json({
-                        message: 'Sửa thể loại thành công',
+                        message: 'Cập nhật thể loại thành công',
                         data: category
                     })
                 }
@@ -80,15 +78,46 @@ router.put('/:id_category', Auth.authenAdmin, async (req, res, next) => {
                 })
             }
         } else {
-            res.status(400).json({
-                message: 'Thiếu dữ liệu để thêm thể loại'
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để cập nhật thể loại'
             })
         }
     } catch (e) {
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
-});
+})
+
+router.delete('/:id_category', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_category = req.params.id_category
+
+        const category = await Category.hasByCategory(id_category)
+        if (category) {
+            const categoryDsExists = await DS.hasCategoryById(id_category)
+
+            if (categoryDsExists) {
+                return res.status(400).json({
+                    message: 'Thể loại đã thêm vào đầu sách không thể xóa'
+                })
+            } else {
+                await Category.deleteCategory(id_category)
+                return res.status(200).json({
+                    message: 'Xóa thể loại thành công'
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Thể loại không tồn tại'
+            })
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 module.exports = router

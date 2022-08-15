@@ -55,4 +55,15 @@ db.updateAuthor = (author) => {
     });
 }
 
+db.deleteAuthor = (id_author) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM author WHERE id_author = $1",
+            [id_author],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
 module.exports = db

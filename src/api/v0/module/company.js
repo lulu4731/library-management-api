@@ -66,4 +66,15 @@ db.hasByCompany = (id_publishing_company) => {
     });
 }
 
+db.deleteCompany = (id_publishing_company) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM publishing_company WHERE id_publishing_company = $1",
+            [id_publishing_company],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
 module.exports = db
