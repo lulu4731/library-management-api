@@ -44,6 +44,17 @@ db.updateStatusBook = (id_status, id_book) => {
     });
 }
 
+db.updatePositionBook = (position, id_book) => {
+    return new Promise((resolve, reject) => {
+        pool.query("UPDATE book SET position = $1 where id_book = $2 RETURNING *",
+            [position, id_book],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
 db.getBorrowBook = (isbn) => {
     return new Promise((resolve, reject) => {
         pool.query("select id_book from book where isbn = $1 and id_status = 0",

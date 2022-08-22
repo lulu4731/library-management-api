@@ -4,7 +4,7 @@ const Category = require('../module/category')
 const Auth = require('../../../middleware/auth')
 const DS = require('../module/ds')
 
-router.get('/', Auth.authenAdmin, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
     try {
         const data = await Category.getAllCategory()
         return res.status(200).json({

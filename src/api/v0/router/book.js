@@ -29,4 +29,22 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
+router.put('/:id_book', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { position } = req.body
+        const id_book = req.params.id_book
+
+        const book = await Book.updatePositionBook(position, id_book)
+        book['ds'] = JSON.stringify(await DS.hasDsById(book.isbn))
+        delete book['isbn']
+
+        return res.status(200).json({
+            message: 'Cập nhật vị trí sách thành công',
+            data: book
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
 module.exports = router

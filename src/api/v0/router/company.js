@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Company = require('../module/company')
 const Auth = require('../../../middleware/auth')
+const DS = require('../module/ds')
 
 router.get('/', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -17,9 +18,9 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
 
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
-        const { name, address, phone, email } = req.body;
-        if (name && address && phone && email) {
-            let nameExists = await Company.hasName(name)
+        const { name_publishing_company, address, phone, email } = req.body;
+        if (name_publishing_company && address && phone && email) {
+            let nameExists = await Company.hasName(name_publishing_company)
             let emailExists = await Company.hasEmail(email)
 
             if (nameExists) {
@@ -34,12 +35,12 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                 })
             }
 
-            const company = { name, address, phone, email }
+            const company = { name_publishing_company, address, phone, email }
             const id_publishing_company = await Company.addCompany(company)
             if (id_publishing_company) {
-                return res.status(200).json({
+                return res.status(201).json({
                     message: 'Thêm nhà xuất bản thành công',
-                    company: {
+                    data: {
                         ...company,
                         id_publishing_company: id_publishing_company
                     }
@@ -61,14 +62,14 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
 router.put('/:id_publishing_company', Auth.authenAdmin, async (req, res, next) => {
     try {
         const id_publishing_company = req.params.id_publishing_company
-        const { name, address, phone, email } = req.body
+        const { name_publishing_company, address, phone, email } = req.body
 
-        if (name && address && phone && email) {
-            const oldCompany = await Company.hasByCompany(id_publishing_company)
+        if (name_publishing_company && address && phone && email) {
+            const oldCompany = await Company.hasByIdCompany(id_publishing_company)
 
             if (oldCompany) {
-                if (oldCompany.name_publishing_company !== name) {
-                    let nameExists = await Company.hasName(name)
+                if (oldCompany.name_publishing_company !== name_publishing_company) {
+                    let nameExists = await Company.hasName(name_publishing_company)
                     if (nameExists) {
                         return res.status(400).json({
                             message: 'Trùng tên nhà xuất bản!'
@@ -85,12 +86,12 @@ router.put('/:id_publishing_company', Auth.authenAdmin, async (req, res, next) =
                     }
                 }
 
-                const companyUpdate = { name, address, phone, email, id_publishing_company }
+                const companyUpdate = { name_publishing_company, address, phone, email, id_publishing_company }
                 const company = await Company.updateCompany(companyUpdate)
                 if (company) {
                     return res.status(200).json({
                         message: 'Cập nhật nhà xuất bản thành công',
-                        company: company
+                        data: company
                     })
                 }
 
@@ -118,7 +119,7 @@ router.delete('/:id_publishing_company', Auth.authenAdmin, async (req, res, next
 
         const company = await Company.hasByCompany(id_publishing_company)
         if (company) {
-            const companyDsExists = await DS.hasByCompanyById(id_publishing_company)
+            const companyDsExists = await DS.hasCompanyById(id_publishing_company)
 
             if (companyDsExists) {
                 return res.status(400).json({

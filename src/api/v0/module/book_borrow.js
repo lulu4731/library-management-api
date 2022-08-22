@@ -149,4 +149,19 @@ db.getBookByIdBorrow = (id_borrow) => {
             });
     });
 }
+
+db.getBookBorrowByIdReader = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT DS.isbn FROM book_borrow BB
+        INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow
+		INNER JOIN book B ON BD.id_book = B.id_book
+		INNER JOIN ds DS ON DS.isbn = B.isbn
+		where BB.id_readers = $1 and BD.borrow_status = 0`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows.map(item => item.isbn));
+            });
+    });
+}
 module.exports = db

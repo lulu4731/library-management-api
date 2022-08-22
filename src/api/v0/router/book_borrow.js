@@ -70,7 +70,7 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
 
         if (books && id_readers) {
             const readerBorrowExists = await BookBorrow.hasByReadersBorrow(id_readers)
-            // console.log(readerBorrowExists)
+
             if ((readerBorrowExists == 1 && books.length > 2) || (readerBorrowExists == 2 && books.length > 1)) {
                 return res.status(400).json({
                     message: `Bạn chỉ mượn thêm đượn ${3 - readerBorrowExists} quyển sách nữa thôi nhé!`
@@ -79,6 +79,17 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
             if (readerBorrowExists == 3) {
                 return res.status(400).json({
                     message: `Bạn đã mượn đủ 3 quyển sách rồi nhé!`
+                })
+            }
+            const readerBorrowBook = await BookBorrow.getBookBorrowByIdReader(id_readers)
+            const filteredArray = books.find(value => readerBorrowBook.includes(value.id_book));
+            // console.log(readerBorrowBook)
+            // console.log(books)
+            // console.log(filteredArray)
+            if (filteredArray !== undefined) {
+                const ds = await DS.hasByDS(filteredArray.id_book)
+                return res.status(400).json({
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
                 })
             }
 
@@ -269,6 +280,18 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
                 })
             }
 
+            const readerBorrowBook = await BookBorrow.getBookBorrowByIdReader(id_readers)
+            const filteredArray = books.find(value => readerBorrowBook.includes(value.id_book));
+            // console.log(readerBorrowBook)
+            // console.log(books)
+            // console.log(filteredArray)
+            if (filteredArray !== undefined) {
+                const ds = await DS.hasByDS(filteredArray.id_book)
+                return res.status(400).json({
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
+                })
+            }
+            
             const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
             if (expiredBorrowExists === 0) {
 
@@ -282,7 +305,7 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
                         if (item.borrow_status === 0) {
                             detail = await BookBorrow.addBorrowDetails({ id_book: book.id_book, expired: item.expired, id_borrow })
                             detail['ds'] = await BorrowDetails.getDsBookDetailsById(book.id_book)
-                            delete detail['id_borrow'] 
+                            delete detail['id_borrow']
                             await Book.updateStatusBook(1, book.id_book)
                             // book_details = [...book_details, detail]
                         } else {
@@ -295,7 +318,7 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
                             await Book.updateStatusBook(0, book.id_book)
                         }
 
-                        book_details = [...book_details, detail]    
+                        book_details = [...book_details, detail]
                     }
                 }
                 return res.status(200).json({

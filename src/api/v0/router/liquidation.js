@@ -109,7 +109,7 @@ router.put('/:id_liquidation', Auth.authenAdmin, async (req, res, next) => {
         }
 
         return res.status(200).json({
-            message: 'Sửa phiếu thanh lý thành công',
+            message: 'Cập nhật phiếu thanh lý thành công',
             data: {
                 id_liquidation: liquidation.id_liquidation,
                 create_time: liquidation.create_time,

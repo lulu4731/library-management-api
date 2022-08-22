@@ -202,7 +202,7 @@ router.post('/readers/expired', Auth.authenAdmin, async (req, res, next) => {
         const data = await Statistical.getReaderBorrowExpiredDate(startDate, endDate)
 
         return res.status(200).json({
-            message: 'Lấy thống kê số độc giả quá hạn',
+            message: 'Lấy thống kê số sách quá hạn mà độc giả đã mượn',
             data: data
         })
     } catch (error) {

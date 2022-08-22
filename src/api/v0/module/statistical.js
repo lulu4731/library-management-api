@@ -83,12 +83,29 @@ db.getReaderBorrowExpired = () => {
     });
 }
 
+// db.getReaderBorrowExpiredDate = (startDate, endDate) => {
+//     return new Promise((resolve, reject) => {
+//         pool.query(`SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP - BD.expired) as day, R.phone  FROM borrow_details BD
+//         INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+//         INNER JOIN readers R ON R.id_readers = BB.id_readers
+//         where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp`,
+//             [startDate, endDate],
+//             (err, result) => {
+//                 if (err) return reject(err);
+//                 return resolve(result.rows);
+//             });
+//     });
+// }
+
 db.getReaderBorrowExpiredDate = (startDate, endDate) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  FROM borrow_details BD
+        pool.query(`SELECT distinct DS.name_book, CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP - BD.expired) as day, R.phone FROM borrow_details BD
         INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+		INNER JOIN book B ON BD.id_book = B.id_book
+		INNER JOIN ds DS ON DS.isbn = B.isbn
         INNER JOIN readers R ON R.id_readers = BB.id_readers
-        where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp`,
+        where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp
+		ORDER BY day DESC`,
             [startDate, endDate],
             (err, result) => {
                 if (err) return reject(err);
