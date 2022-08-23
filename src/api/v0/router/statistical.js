@@ -27,6 +27,38 @@ router.get('/ds', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
+router.get('/top-book-week', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const data = await Statistical.getTopBookByWeek()
+
+        return res.status(200).json({
+            message: 'Lấy thống top 5 sách mượn nhiều nhất theo tuần',
+            data: {
+                books: data.map(item => item.name_book),
+                amount: data.map(item => +item.amount_book)
+            }
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
+router.get('/top-book-month', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const data = await Statistical.getTopBookByMonth()
+
+        return res.status(200).json({
+            message: 'Lấy thống top 5 sách mượn nhiều nhất theo tuần',
+            data: {
+                books: data.map(item => item.name_book),
+                amount: data.map(item => item.amount_book)
+            }
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.get('/tk', Auth.authenAdmin, async (req, res, next) => {
     try {
         const data = await Statistical.getTK()
@@ -37,8 +69,6 @@ router.get('/tk', Auth.authenAdmin, async (req, res, next) => {
         const a = [...data, ...category]
 
         let myArrayWithNoDuplicates = a.reduce(function (accumulator, element) {
-            // console.log(accumulator)
-            // console.log(1)
             if (!accumulator.find((item => item.isbn === element.isbn))) {
                 accumulator.push(element)
             }
@@ -73,9 +103,11 @@ router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
         // console.log(req.body)
         const data = await Statistical.getTKDate(startDate, endDate)
 
+        const categoryOrderByBook = await Statistical.getCategoryOrderByCategory()
+
         const category = await Statistical.getCategory()
         // // const temps = category.map(item => item.name_category)
-        const categoryTK = [...new Set(category.map(item => item.name_category))]
+        const categoryTK = [...new Set(categoryOrderByBook.map(item => item.name_category)), ...new Set(category.map(item => item.name_category))]
 
         const a = [...data, ...category]
 
@@ -90,7 +122,7 @@ router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
 
         let list = []
 
-        for (let i of categoryTK) {
+        for (let i of new Set(categoryTK)) {
             list.push(i)
             for (let j of myArrayWithNoDuplicates) {
                 if (i === j.name_category) {

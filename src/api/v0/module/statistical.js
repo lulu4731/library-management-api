@@ -60,6 +60,21 @@ db.getCategory = () => {
     });
 }
 
+db.getCategoryOrderByCategory = () => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT C.name_category, count(C.name_category) as amount_book FROM book B
+        INNER JOIN ds DS ON DS.isbn = B.isbn
+        INNER JOIN category C ON DS.id_category = C.id_category
+         INNER JOIN borrow_details BD ON BD.id_book = B.id_book
+          GROUP BY C.name_category
+          ORDER BY amount_book DESC`,
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
 db.getNameReader = () => {
     return new Promise((resolve, reject) => {
         pool.query(`select CONCAT(first_name, ' ', last_name) as name_reader from readers `,
@@ -165,6 +180,40 @@ db.getStatisticalBookByDate = () => {
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.getTopBookByWeek = () => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT DS.name_book, count(*) as amount_book FROM book B
+        INNER JOIN ds DS ON DS.isbn = B.isbn
+        INNER JOIN borrow_details BD ON BD.id_book = B.id_book
+		INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+		where BB.create_time:: date BETWEEN date_trunc('week', CURRENT_TIMESTAMP::timestamp)::date AND (date_trunc('week', CURRENT_TIMESTAMP::timestamp)+ '6 days'::interval)::date
+        GROUP BY DS.name_book
+        ORDER BY amount_book DESC
+		LIMIT 5`,
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
+db.getTopBookByMonth = () => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT DS.name_book, count(*) as amount_book FROM book B
+        INNER JOIN ds DS ON DS.isbn = B.isbn
+        INNER JOIN borrow_details BD ON BD.id_book = B.id_book
+		INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+		where BB.create_time:: date BETWEEN date_trunc('month', CURRENT_TIMESTAMP::timestamp)::date AND (date_trunc('month', CURRENT_TIMESTAMP::timestamp)+ INTERVAL '1 MONTH - 1 day')::date
+        GROUP BY DS.name_book
+        ORDER BY amount_book DESC
+		LIMIT 5`,
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
             });
     });
 }

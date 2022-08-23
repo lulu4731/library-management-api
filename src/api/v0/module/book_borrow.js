@@ -57,7 +57,7 @@ db.addBorrowDetailsAll = (borrowDetails) => {
 
 db.updateBorrowDetails = (borrowDetails) => {
     return new Promise((resolve, reject) => {
-        pool.query("UPDATE borrow_details SET id_librarian_pay = $1, borrow_status = $2, date_return_book = current_timestamp where id_book = $3 and id_borrow = $4 RETURNING *",
+        pool.query("UPDATE borrow_details SET id_librarian_pay = $1, borrow_status = $2, date_return_book = TO_CHAR(now():: date, 'dd/mm/yyyy')::timestamp where id_book = $3 and id_borrow = $4 RETURNING *",
             [borrowDetails.id_librarian_pay, borrowDetails.borrow_status, borrowDetails.id_book, borrowDetails.id_borrow],
             (err, result) => {
                 if (err) return reject(err);
