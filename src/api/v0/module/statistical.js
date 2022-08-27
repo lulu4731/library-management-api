@@ -119,7 +119,7 @@ db.getReaderBorrowExpiredDate = (startDate, endDate) => {
 		INNER JOIN book B ON BD.id_book = B.id_book
 		INNER JOIN ds DS ON DS.isbn = B.isbn
         INNER JOIN readers R ON R.id_readers = BB.id_readers
-        where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp
+        where BD.expired + '1 days'::interval < CURRENT_TIMESTAMP and BD.borrow_status = 0 and BD.expired::date BETWEEN $1::timestamp AND $2::timestamp
 		ORDER BY day DESC`,
             [startDate, endDate],
             (err, result) => {

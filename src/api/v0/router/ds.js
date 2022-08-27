@@ -211,4 +211,36 @@ router.put('/:isbn', Auth.authenAdmin, async (req, res, next) => {
     }
 });
 
+router.delete('/:isbn', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const isbn = req.params.isbn
+
+        const ds = await DS.hasDsById(isbn)
+        if (ds) {
+            const dsReceiptExists = await DS.hasDsByReceiptDetails(isbn)
+
+            if (dsReceiptExists) {
+                return res.status(400).json({
+                    message: 'Đầu sách đã thêm vào phiếu nhập không thể xóa'
+                })
+            } else {
+                await DS.deleteDsCompose(isbn)
+                await DS.deleteDs(isbn)
+                return res.status(200).json({
+                    message: 'Xóa đầu sách thành công'
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Đầu sách không tồn tại'
+            })
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
 module.exports = router

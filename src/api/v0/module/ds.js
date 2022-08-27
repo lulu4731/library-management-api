@@ -123,5 +123,48 @@ db.hasCompanyById = (id_publishing_company) => {
     });
 }
 
+db.hasDsByBook = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("select * from book where isbn = $1",
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            })
+    });
+}
+
+db.hasDsByReceiptDetails = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("select * from receipt_details where isbn = $1",
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount > 0);
+            })
+    });
+}
+
+db.deleteDs = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM ds WHERE isbn = $1",
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
+db.deleteDsCompose = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM composed WHERE isbn = $1",
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
 
 module.exports = db

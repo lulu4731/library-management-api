@@ -293,7 +293,7 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
             }
             
             const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
-            if (expiredBorrowExists === 0) {
+            // if (expiredBorrowExists === 0) {
 
                 const borrow = await BookBorrow.updateBookBorrow({ id_readers: id_readers, id_librarian: id_librarian, id_borrow: +id_borrow })
                 // console.log(borrow)
@@ -338,11 +338,11 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
             }
 
 
-        } else {
-            return res.status(400).json({
-                message: 'Thiếu dữ liệu để lập phiếu mượn sách'
-            })
-        }
+        // } else {
+        //     return res.status(400).json({
+        //         message: 'Thiếu dữ liệu để lập phiếu mượn sách'
+        //     })
+        // }
 
     } catch (e) {
         return res.status(500).json({
