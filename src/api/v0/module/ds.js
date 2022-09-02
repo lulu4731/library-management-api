@@ -48,8 +48,8 @@ db.hasName = (name_book) => {
 
 db.addDS = (ds) => {
     return new Promise((resolve, reject) => {
-        pool.query("INSERT INTO ds (id_publishing_company, id_category, name_book, page, price, publishing_year, id_title) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING isbn",
-            [ds.id_publishing_company, ds.id_category, ds.name_book, ds.page, ds.price, ds.publishing_year, ds.id_title],
+        pool.query("INSERT INTO ds (id_publishing_company, id_category, name_book, page, price, publishing_year, id_title, description, img) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING isbn",
+            [ds.id_publishing_company, ds.id_category, ds.name_book, ds.page, ds.price, ds.publishing_year, ds.id_title, ds.description, ds.img],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0].isbn);
@@ -70,8 +70,8 @@ db.hasByDS = (isbn) => {
 
 db.updateDS = (ds) => {
     return new Promise((resolve, reject) => {
-        pool.query("UPDATE ds SET id_publishing_company = $1, id_category = $2, name_book = $3, page = $4, price = $5, publishing_year = $6, id_title = $7 where isbn = $8 RETURNING *",
-            [ds.id_publishing_company, ds.id_category, ds.name_book, ds.page, ds.price, ds.publishing_year, ds.id_title, ds.isbn],
+        pool.query("UPDATE ds SET id_publishing_company = $1, id_category = $2, name_book = $3, page = $4, price = $5, publishing_year = $6, id_title = $7, description = $8, img = $9 where isbn = $10 RETURNING *",
+            [ds.id_publishing_company, ds.id_category, ds.name_book, ds.page, ds.price, ds.publishing_year, ds.id_title, ds.description, ds.img, ds.isbn],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

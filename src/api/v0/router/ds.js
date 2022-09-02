@@ -85,9 +85,9 @@ router.get('/select', Auth.authenAdmin, async (req, res, next) => {
 
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
-        const { company, category, name_book, page, price, publishing_year, authors, id_title } = req.body;
+        const { company, category, name_book, page, price, publishing_year, authors, id_title, description, img } = req.body;
 
-        if (company && category && name_book && page && price && publishing_year && authors) {
+        if (company && category && name_book && page && publishing_year && authors) {
             const nameExists = await DS.hasName(name_book)
 
             if (nameExists) {
@@ -95,7 +95,7 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                     message: 'Tên đầu sách đã tồn tại!'
                 })
             } else {
-                const ds = { id_publishing_company: company.value, id_category: category.value, name_book, page, price, publishing_year, id_title }
+                const ds = { id_publishing_company: company.value, id_category: category.value, name_book, page, price, publishing_year, id_title, description, img }
                 const isbn = await DS.addDS(ds)
                 // let listAuthors = []
 
@@ -122,6 +122,8 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                             page,
                             price,
                             publishing_year,
+                            description,
+                            img,
                             company: JSON.stringify(company),
                             category: JSON.stringify(category),
                             authors: JSON.stringify(authors)
@@ -145,9 +147,9 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
 router.put('/:isbn', Auth.authenAdmin, async (req, res, next) => {
     try {
         const isbn = req.params.isbn
-        const { company, category, name_book, page, price, publishing_year, authors, id_title } = req.body;
+        const { company, category, name_book, page, price, publishing_year, authors, id_title, description, img } = req.body;
 
-        if (company && category && name_book && page && price && publishing_year && authors) {
+        if (company && category && name_book && page && publishing_year && authors) {
             const oldDS = await DS.hasByDS(isbn)
 
             if (oldDS) {
@@ -159,7 +161,7 @@ router.put('/:isbn', Auth.authenAdmin, async (req, res, next) => {
                         })
                     }
                 }
-                const dsUpdate = { id_publishing_company: company.value, id_category: category.value, name_book, id_title, page, price, publishing_year, isbn }
+                const dsUpdate = { id_publishing_company: company.value, id_category: category.value, name_book, id_title, page, price, publishing_year, isbn, description, img }
                 const ds = await DS.updateDS(dsUpdate)
 
                 // let listAuthors = []
@@ -185,6 +187,8 @@ router.put('/:isbn', Auth.authenAdmin, async (req, res, next) => {
                             name_book,
                             page,
                             price,
+                            description,
+                            img,
                             publishing_year,
                             company: JSON.stringify(company),
                             category: JSON.stringify(category),
@@ -217,11 +221,11 @@ router.delete('/:isbn', Auth.authenAdmin, async (req, res, next) => {
 
         const ds = await DS.hasDsById(isbn)
         if (ds) {
-            const dsReceiptExists = await DS.hasDsByReceiptDetails(isbn)
+            const dsReceiptExists = await DS.hasDsByBook(isbn)
 
             if (dsReceiptExists) {
                 return res.status(400).json({
-                    message: 'Đầu sách đã thêm vào phiếu nhập không thể xóa'
+                    message: 'Đầu sách đã có sách không được xóa'
                 })
             } else {
                 await DS.deleteDsCompose(isbn)

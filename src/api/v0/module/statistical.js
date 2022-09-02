@@ -114,7 +114,8 @@ db.getReaderBorrowExpired = () => {
 
 db.getReaderBorrowExpiredDate = (startDate, endDate) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT distinct DS.name_book, CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP - BD.expired) as day, R.phone FROM borrow_details BD
+        pool.query(`SELECT distinct DS.name_book, CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, 
+        (CURRENT_TIMESTAMP - BD.expired) as day, R.phone, B.id_book FROM borrow_details BD
         INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
 		INNER JOIN book B ON BD.id_book = B.id_book
 		INNER JOIN ds DS ON DS.isbn = B.isbn

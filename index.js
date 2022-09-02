@@ -40,6 +40,7 @@ app.use(`${apiUrl}/book_borrow`, require('./src/api/v0/router/book_borrow'));
 app.use(`${apiUrl}/book`, require('./src/api/v0/router/book'));
 app.use(`${apiUrl}/liquidation`, require('./src/api/v0/router/liquidation'));
 app.use(`${apiUrl}/statistical`, require('./src/api/v0/router/statistical'));
+app.use(`${apiUrl}/search`, require('./src/api/v0/router/search'));
 
 
 

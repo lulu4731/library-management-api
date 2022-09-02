@@ -100,20 +100,16 @@ router.get('/tk', Auth.authenAdmin, async (req, res, next) => {
 router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { startDate, endDate } = req.body
-        // console.log(req.body)
         const data = await Statistical.getTKDate(startDate, endDate)
 
         const categoryOrderByBook = await Statistical.getCategoryOrderByCategory()
 
         const category = await Statistical.getCategory()
-        // // const temps = category.map(item => item.name_category)
         const categoryTK = [...new Set(categoryOrderByBook.map(item => item.name_category)), ...new Set(category.map(item => item.name_category))]
 
         const a = [...data, ...category]
 
         let myArrayWithNoDuplicates = a.reduce(function (accumulator, element) {
-            // console.log(accumulator)
-            // console.log(1)
             if (!accumulator.find((item => item.isbn === element.isbn))) {
                 accumulator.push(element)
             }

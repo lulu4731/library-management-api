@@ -57,7 +57,7 @@ db.updatePositionBook = (position, id_book) => {
 
 db.getBorrowBook = (isbn) => {
     return new Promise((resolve, reject) => {
-        pool.query("select id_book from book where isbn = $1 and id_status = 0",
+        pool.query("select id_book from book where isbn = $1 and id_status = 0 and id_liquidation is null",
             [isbn],
             (err, result) => {
                 if (err) return reject(err);
