@@ -90,8 +90,6 @@ router.put('/:id_receipt', Auth.authenAdmin, async (req, res, next) => {
         if (data) {
             const receipt = await Receipt.updateReceipt(id_librarian)
 
-            //Kiểm tra số lượng sách còn đủ không
-
             //Lấy đc isbn để xóa sách
             await Receipt.deleteReceiptDetails(receipt.id_receipt)
             for (let item of data) {
@@ -103,7 +101,7 @@ router.put('/:id_receipt', Auth.authenAdmin, async (req, res, next) => {
             }
 
             return res.status(201).json({
-                message: "Thêm phiếu nhập thành công",
+                message: "Cập nhật phiếu nhập thành công",
                 data: {
                     id_receipt: receipt.id_receipt,
                     create_time: receipt.create_time,
@@ -115,7 +113,7 @@ router.put('/:id_receipt', Auth.authenAdmin, async (req, res, next) => {
 
         } else {
             res.status(400).json({
-                message: 'Thiếu dữ liệu để lập phiếu nhập'
+                message: 'Thiếu dữ liệu để lập cập nhật phiếu nhập'
             })
         }
     } catch (e) {
