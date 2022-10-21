@@ -48,10 +48,10 @@ router.get('/top-book-month', Auth.authenAdmin, async (req, res, next) => {
         const data = await Statistical.getTopBookByMonth()
 
         return res.status(200).json({
-            message: 'Lấy thống top 5 sách mượn nhiều nhất theo tuần',
+            message: 'Lấy thống top 5 sách mượn nhiều nhất theo tháng',
             data: {
                 books: data.map(item => item.name_book),
-                amount: data.map(item => item.amount_book)
+                amount: data.map(item => +item.amount_book)
             }
         })
     } catch (error) {

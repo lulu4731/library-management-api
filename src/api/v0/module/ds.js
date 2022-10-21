@@ -11,6 +11,19 @@ db.getAllDS = () => {
     })
 }
 
+db.getAllDSByReader = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select D.*, (select exists(select * from love L where D.isbn = L.isbn and L.id_readers = $1)) as love_status
+        from ds D 
+        order by D.isbn`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
 db.getAllDsToSelect = () => {
     return new Promise((resolve, reject) => {
         pool.query("SELECT isbn as value, name_book as label FROM DS",

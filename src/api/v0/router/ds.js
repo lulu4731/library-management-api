@@ -9,7 +9,10 @@ const Statistical = require('../module/statistical.js')
 
 router.get('/', async (req, res, next) => {
     try {
-        const ds = await DS.getAllDS()
+        let role = Auth.getUserRole(req)
+        let id_user = Auth.getUserID(req)
+
+        const ds = role === 3 ? await DS.getAllDSByReader(id_user) : await DS.getAllDS()
         let listDS = []
 
         if (ds) {
@@ -40,6 +43,40 @@ router.get('/', async (req, res, next) => {
 
 router.get('/public', async (req, res, next) => {
     try {
+        const ds = await DS.getAllDS()
+        const category = await Statistical.getCategory()
+        let listDS = []
+
+        if (ds) {
+            for (let item of ds) {
+                let temps = { ...item }
+                delete temps['id_publishing_company']
+                delete temps['id_category']
+
+                const company = await Company.hasByCompany(item.id_publishing_company)
+                const category = await Category.hasByCategory(item.id_category)
+                const authors = await DS.getAuthorByIdDs(item.isbn)
+                temps['company'] = JSON.stringify(company)
+                temps['category'] = JSON.stringify(category)
+                temps['authors'] = JSON.stringify(authors)
+
+                listDS.push(temps)
+            }
+
+            return res.status(200).json({
+                message: 'Lấy danh sách đầu sách thành công',
+                data: listDS
+            })
+        }
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
+router.get('/reader', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_user = Auth.getUserID(req)
+        console.log(id_user)
         const ds = await DS.getAllDS()
         const category = await Statistical.getCategory()
         let listDS = []

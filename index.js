@@ -41,6 +41,9 @@ app.use(`${apiUrl}/book`, require('./src/api/v0/router/book'));
 app.use(`${apiUrl}/liquidation`, require('./src/api/v0/router/liquidation'));
 app.use(`${apiUrl}/statistical`, require('./src/api/v0/router/statistical'));
 app.use(`${apiUrl}/search`, require('./src/api/v0/router/search'));
+app.use(`${apiUrl}/ds`, require('./src/api/v0/router/comment'))
+app.use(`${apiUrl}/love`, require('./src/api/v0/router/love'))
+app.use(`${apiUrl}/feedback`, require('./src/api/v0/router/feedback'))
 
 
 

@@ -44,15 +44,37 @@ db.add = (reader) => {
     });
 }
 
+db.addReaderRegister = (reader) => {
+    return new Promise((resolve, reject) => {
+        pool.query("INSERT INTO readers (first_name, last_name, email, phone, password, readers_status, citizen_identification) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_readers",
+            [reader.first_name, reader.last_name, reader.email, reader.phone, reader.password, reader.readers_status, reader.citizen_identification],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0].id_readers);
+            });
+    });
+}
+
 db.hasByReaders = (id_readers) => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT id_readers, email, citizen_identification FROM readers WHERE id_readers = $1",
+        pool.query("SELECT id_readers, email, citizen_identification, readers_status, role, first_name, last_name FROM readers WHERE id_readers = $1",
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);
             })
     });
+}
+
+db.selectByEmailReader = (email) => {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT * FROM readers WHERE email = $1',
+            [email],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    })
 }
 
 db.updateReaders = (reader) => {
@@ -81,6 +103,17 @@ db.deleteReaders = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query("DELETE FROM readers WHERE id_readers = $1",
             [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
+db.changeStatus = (id_readers, status) => {
+    return new Promise((resolve, reject) => {
+        pool.query("UPDATE readers SET readers_status = $1 WHERE id_readers = $2 RETURNING *",
+            [status, id_readers],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

@@ -25,7 +25,7 @@ db.selectByEmail = (email) => {
 
 db.hasByLibrarian = (id_librarian) => {
     return new Promise((resolve, reject) => {
-        pool.query('select id_librarian, first_name, last_name from librarian where id_librarian = $1',
+        pool.query('select id_librarian, first_name, last_name, role, librarian_status, email from librarian where id_librarian = $1',
             [id_librarian],
             (err, result) => {
                 if (err) return reject(err);
@@ -122,4 +122,61 @@ db.deleteAccountVerification = (id_librarian) => {
             })
     })
 }
+
+db.getAllLibrarians = () => {
+    return new Promise((resolve, reject) => {
+        pool.query("SELECT * FROM librarian where role != 1",
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.addLibrarian = (librarian) => {
+    return new Promise((resolve, reject) => {
+        pool.query("INSERT INTO librarian (first_name, last_name, address, gender, email, date_of_birth, phone) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *",
+            [librarian.first_name, librarian.last_name, librarian.address, librarian.gender, librarian.email, librarian.date_of_birth, librarian.phone],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    })
+}
+
+db.updateLibrarian = (librarian) => {
+    return new Promise((resolve, reject) => {
+        pool.query("UPDATE librarian SET first_name = $1, last_name = $2, address = $3, gender = $4, email = $5, date_of_birth = $6, phone = $7 where id_librarian = $8 RETURNING *",
+            [librarian.first_name, librarian.last_name, librarian.address, librarian.gender, librarian.email, librarian.date_of_birth, librarian.phone, librarian.id_librarian],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    })
+}
+
+db.updateLibrarianStatus = (status, id_librarian) => {
+    return new Promise((resolve, reject) => {
+        pool.query("UPDATE librarian SET librarian_status = $1 where id_librarian = $2 RETURNING *",
+            [status, id_librarian],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    })
+}
+
+db.resetPassLibrarian = (id_librarian) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE librarian SET password = "$argon2id$v=19$m=4096,t=3,p=1$374t0uiCrcc/nGsYULp9tw$n7wdXlJgM0NTlT0dOsPQGrC41y5S7+Ez4PP1XZLj8sY" where id_librarian = $1 RETURNING *`,
+            [id_librarian],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    })
+}
+
+
+
 module.exports = db

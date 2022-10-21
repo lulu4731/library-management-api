@@ -3,6 +3,8 @@ const router = express.Router()
 const Readers = require('../module/readers')
 const BookBorrow = require('../module/book_borrow')
 const Auth = require('../../../middleware/auth')
+const LockAccount = require('../module/lock_account')
+const argon2 = require('argon2')
 
 router.get('/', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -59,7 +61,50 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
             message: 'Something wrong'
         })
     }
-});
+})
+
+router.post('/register', async (req, res, next) => {
+    try {
+        const { first_name, last_name, email, phone, password, citizen_identification } = req.body
+        if (email && first_name && last_name && phone && password && citizen_identification) {
+            let emailExists = await Readers.hasEmail(email)
+            let citizenIdentificationExists = await Readers.hasCitizenIdentification(citizen_identification)
+
+            if (citizenIdentificationExists) {
+                return res.status(400).json({
+                    message: 'CMND/CCCD này đã được sử dụng!'
+                })
+            }
+
+            if (emailExists) {
+                return res.status(400).json({
+                    message: 'Email này đã được sử dụng!'
+                })
+            } else {
+                const hashedPassword = await argon2.hash(password)
+                const reader = { first_name, last_name, email, phone, password: hashedPassword, readers_status: 3, citizen_identification }
+                const id_readers = await Readers.addReaderRegister(reader)
+                if (id_readers) {
+                    return res.status(201).json({
+                        message: 'Tạo tài khoản độc giả thành công',
+                        data: {
+                            ...reader,
+                            id_readers: id_readers
+                        }
+                    })
+                }
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để tạo độc giả'
+            })
+        }
+    } catch (e) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 router.put('/:id_readers', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -138,6 +183,172 @@ router.delete('/:id_readers', Auth.authenAdmin, async (req, res, next) => {
             })
         }
 
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
+const unLockAccount = async (id_readers_lock) => {
+    const readers = await Readers.hasByReaders(id_readers_lock)
+    if (readers.readers_status == 1) {
+        await Readers.changeStatus(id_readers_lock, 0)
+    }
+}
+
+const setTimeUnlock = async (id_readers_lock, time) => {
+    const readers = await Readers.hasByReaders(id_readers_lock)
+    setTimeout(() => {
+        if (readers.readers_status == 1) {
+            Readers.changeStatus(id_readers_lock, 0)
+        }
+    }, time);
+}
+
+router.post('/:id_readers_lock/ban', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_readers_lock = req.params.id_readers_lock
+        const id_librarian_boss = Auth.getUserID(req)
+        const reason = req.body.reason
+        const hours_lock = req.body.hours_lock
+
+        const readers = await Readers.hasByReaders(id_readers_lock)
+        if (!readers) {
+            return res.status(404).json({
+                message: 'Không tìm thấy độc giả để khóa'
+            });
+        }
+
+        // const acc_boss = await Account.selectId(id_account_boss);
+        const reader_lock = await Readers.hasByReaders(id_readers_lock);
+
+        // if (acc_boss.account_status != 0 || acc_boss.id_role >= acc_lock.id_role) {
+        //     return res.status(403).json({
+        //         message: 'Tài khoản không có quyền thực hiện',
+        //     });
+        // }
+
+        if (Number(hours_lock) < 1 || Number(hours_lock) > 576) {
+            return res.status(401).json({
+                message: 'Thời gian khóa chỉ được nhỏ hơn 576 giờ'
+            });
+        }
+
+        if (reader_lock.readers_status != 0) {
+            return res.status(202).json({
+                message: 'Độc giả này đã bị khóa'
+            })
+        }
+
+        if (reason && hours_lock) {
+            LockAccount.add(id_readers_lock, id_librarian_boss, reason, hours_lock)
+            Readers.changeStatus(id_readers_lock, 1)
+            setTimeUnlock(id_readers_lock, Number(hours_lock) * 30)
+
+            return res.status(200).json({
+                message: 'Khóa độc giả thành công'
+            });
+
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để khóa độc giả'
+            });
+        }
+
+    } catch (err) {
+        return res.sendStatus(500)
+    }
+})
+
+router.patch('/:id_readers_lock/die', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_readers_lock = req.params.id_readers_lock
+        const id_librarian_boss = Auth.getUserID(req)
+        const reason = req.body.reason
+
+        const readers = await Readers.hasByReaders(id_readers_lock)
+        if (!readers) {
+            return res.status(404).json({
+                message: 'Không tìm thấy độc giả để khóa'
+            });
+        }
+        const reader_lock = await Readers.hasByReaders(id_readers_lock)
+
+        if (reader_lock.readers_status != 0) {
+            return res.status(202).json({
+                message: 'Độc giả này đã bị khóa'
+            })
+        }
+
+        if (reason) {
+            LockAccount.add(id_readers_lock, id_librarian_boss, reason, 0)
+            Readers.changeStatus(id_readers_lock, 2)
+
+            return res.status(200).json({
+                message: 'Khóa vĩnh viễn độc giả thành công'
+            })
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu khóa độc giả'
+            })
+        }
+
+    } catch (err) {
+        return res.sendStatus(500)
+    }
+})
+
+router.patch('/:id_readers_lock/unlock', Auth.authenAdmin, async (req, res, next) => {
+    const id_readers_lock = req.params.id_readers_lock
+    const id_librarian_boss = Auth.getUserID(req)
+
+    const readers = await Readers.hasByReaders(id_readers_lock)
+    if (!readers) {
+        return res.status(404).json({
+            message: 'Không tìm thấy độc giả để khóa'
+        });
+    }
+
+    // let acc_boss = await Account.selectId(id_account_boss);
+    // let acc_lock = await Account.selectId(id_account_lock);
+
+    // if (acc_boss.account_status != 0 || acc_boss.id_role >= acc_lock.id_role || acc_lock.account_status == 2) {
+    //     return res.status(403).json({
+    //         message: 'Tài khoản không có quyền thực hiện'
+    //     });
+    // } else {
+    Readers.changeStatus(id_readers_lock, 0)
+
+    return res.status(200).json({
+        message: 'Mở khóa tài khoản thành công'
+    });
+    // }
+})
+
+router.patch('/change-status/:id_readers', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_readers = req.params.id_readers
+
+        const reader = await Readers.hasByReaders(id_readers)
+
+        if (!reader) {
+            return res.status(400).json({
+                message: 'Độc giả không tồn tại',
+            })
+        }
+
+        if (reader.readers_status !== 3) {
+            return res.status(400).json({
+                message: 'Độc giả này đã được duyệt',
+            })
+        } else {
+            const updateReadersStatus = await Readers.changeStatus(id_readers, 0)
+            return res.status(200).json({
+                message: 'Duyệt độc giả thành công',
+                data: updateReadersStatus
+            })
+        }
     } catch (error) {
         return res.status(500).json({
             message: 'Something wrong'

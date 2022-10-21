@@ -5,6 +5,163 @@ const Librarian = require('../module/librarian')
 const Auth = require('../../../middleware/auth')
 const argon2 = require('argon2')
 const nodemailer = require("nodemailer");
+const Readers = require('../module/readers')
+
+// router.post('/login', async (req, res, next) => {
+//     try {
+//         const { email, password } = req.body
+
+//         if (!(email && password)) {
+//             return res.status(404).json({
+//                 message: 'Thiếu thông tin đăng nhập',
+//             })
+//         }
+
+//         const exist = await Librarian.hasByEmail(email)
+//         if (exist) {
+//             const librarian = await Librarian.selectByEmail(email)
+//             const isPasswordValid = await argon2.verify(librarian.password, password)
+
+//             if (isPasswordValid) {
+//                 const data = {
+//                     id_librarian: librarian.id_librarian,
+//                     id_role: 1
+//                 }
+
+//                 const accessToken = jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `15d` });
+//                 return res.status(200).json({
+//                     message: 'Đăng nhập thành công',
+//                     accessToken: accessToken
+//                 });
+//             } else {
+//                 return res.status(400).json({
+//                     message: 'Sai password'
+//                 })
+//             }
+//         } else {
+//             return res.status(400).json({
+//                 message: 'Tên đăng nhập không tồn tại'
+//             })
+//         }
+//     } catch (error) {
+//         return res.sendStatus(500);
+//     }
+// })
+router.get('/', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const data = await Librarian.getAllLibrarians()
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
+router.post('/', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const { first_name, last_name, address, gender, email, date_of_birth, phone } = req.body;
+        if (email && first_name && last_name && address && date_of_birth) {
+            const existLibrarian = await Librarian.hasByEmail(email)
+
+            if (existLibrarian) {
+                return res.status(400).json({
+                    message: 'Email này đã được sử dụng!'
+                })
+            } else {
+                const librarian = { first_name, last_name, address, gender: +gender, email, date_of_birth, phone }
+                const addLibrarian = await Librarian.addLibrarian(librarian)
+                if (addLibrarian) {
+                    return res.status(201).json({
+                        message: 'Tạo thủ thư thành công',
+                        data: addLibrarian
+                    })
+                }
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để tạo thủ thư'
+            })
+        }
+    } catch (e) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
+router.put('/:id_librarian', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const id_librarian = req.params.id_librarian
+        const { first_name, last_name, address, gender, email, date_of_birth, phone } = req.body;
+
+        if (email && first_name && last_name && address && date_of_birth) {
+            const oldLibrarian = await Librarian.hasLibrarianById(id_librarian)
+
+            if (oldLibrarian) {
+                if (oldLibrarian.email !== email) {
+                    const existLibrarian = await Librarian.hasByEmail(email)
+
+                    if (existLibrarian) {
+                        return res.status(400).json({
+                            message: 'Email này đã được sử dụng!'
+                        })
+                    }
+                }
+
+                const librarianUpdate = { first_name, last_name, address, gender: +gender, email, date_of_birth, id_librarian, phone }
+                const librarian = await Librarian.updateLibrarian(librarianUpdate)
+                if (librarian) {
+                    return res.status(200).json({
+                        message: 'Cập nhật thủ thư thành công',
+                        data: librarian
+                    })
+                }
+            } else {
+                return res.status(400).json({
+                    message: 'Thủ thư không tồn tại'
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu cập nhật thủ thư'
+            })
+        }
+    } catch (e) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+
+})
+
+router.patch('/:id_librarian', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const id_librarian = req.params.id_librarian
+
+        const librarian = await Librarian.hasByLibrarian(id_librarian)
+
+        if (librarian) {
+            const updateLibrarianStatus = await Librarian.updateLibrarianStatus(librarian.librarian_status === 0 ? 1 : 0, id_librarian)
+            return res.status(200).json({
+                message: 'Cập nhật trạng thái làm việc thành công',
+                data: updateLibrarianStatus
+            })
+        } else {
+            return res.status(400).json({
+                message: 'Thủ thư không tồn tại',
+            })
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 router.post('/login', async (req, res, next) => {
     try {
@@ -16,15 +173,43 @@ router.post('/login', async (req, res, next) => {
             })
         }
 
-        const exist = await Librarian.hasByEmail(email)
-        if (exist) {
+        const existLibrarian = await Librarian.hasByEmail(email)
+        const existReader = await Readers.hasEmail(email)
+
+        if (existLibrarian) {
             const librarian = await Librarian.selectByEmail(email)
             const isPasswordValid = await argon2.verify(librarian.password, password)
 
             if (isPasswordValid) {
                 const data = {
-                    id_librarian: librarian.id_librarian,
-                    id_role: 1
+                    id_user: librarian.id_librarian,
+                    role: librarian.role
+                }
+
+                const accessToken = jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `15d` });
+                return res.status(200).json({
+                    message: 'Đăng nhập thành công',
+                    accessToken: accessToken
+                });
+            } else {
+                return res.status(400).json({
+                    message: 'Sai password'
+                })
+            }
+        } else if (existReader) {
+            const reader = await Readers.selectByEmailReader(email)
+            const isPasswordValid = await argon2.verify(reader.password, password)
+
+            if (reader.readers_status === 3) {
+                return res.status(400).json({
+                    message: 'Tài khoản của bạn chưa được duyệt'
+                })
+            }
+
+            if (isPasswordValid) {
+                const data = {
+                    id_user: reader.id_readers,
+                    role: reader.role
                 }
 
                 const accessToken = jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `15d` });
@@ -47,10 +232,11 @@ router.post('/login', async (req, res, next) => {
     }
 })
 
-router.get('/information', Auth.authenAdmin, async (req, res, next) => {
+router.get('/information', Auth.authenGTUser, async (req, res, next) => {
     try {
-        const id_librarian = Auth.getUserID(req)
-        const data = await Librarian.hasByLibrarian(id_librarian)
+        const id_user = Auth.getUserID(req)
+        const role = Auth.getUserRole(req)
+        const data = role == 3 ? await Readers.hasByReaders(id_user) : await Librarian.hasByLibrarian(id_user)
         return res.status(200).json({
             message: 'Lấy user thành công',
             data: data
@@ -59,7 +245,6 @@ router.get('/information', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
-
 
 const createCode = () => {
     var result = '';
