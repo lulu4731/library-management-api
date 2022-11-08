@@ -48,4 +48,15 @@ db.getListLoveDsByReader = (id_readers) => {
     })
 }
 
+db.getAmountLove = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select * from love L where L.id_readers = $1`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rowCount);
+            })
+    })
+}
+
 module.exports = db;

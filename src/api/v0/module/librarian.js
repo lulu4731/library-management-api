@@ -125,7 +125,7 @@ db.deleteAccountVerification = (id_librarian) => {
 
 db.getAllLibrarians = () => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT * FROM librarian where role != 1",
+        pool.query("SELECT L.*, CONCAT(L.first_name, ' ', L.last_name) as name  FROM librarian L where L.role != 1",
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -177,6 +177,28 @@ db.resetPassLibrarian = (id_librarian) => {
     })
 }
 
+db.getSearchLibrarian = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM librarian
+        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1)) and role != 1`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 
+db.getSearchUnAccentLibrarian = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM librarian
+        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1))) and role != 1`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 
 module.exports = db

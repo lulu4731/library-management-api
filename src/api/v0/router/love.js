@@ -11,24 +11,17 @@ router.post('/:isbn', Auth.authenGTUser, async (req, res, next) => {
         const id_readers = Auth.getUserID(req)
         const isbn = req.params.isbn
 
-        // Tài khoản bị khóa
-        // if (acc.account_status != 0) {
-        //     return res.status(403).json({
-        //         message: 'Tài khoản đã bị khóa, không thể thêm bài'
-        //     })
-        // }
-
         const existLove = await Love.hasLove(id_readers, isbn)
         if (!existLove) {
             const love = await Love.addLove(id_readers, isbn)
 
-            res.status(200).json({
+            return res.status(200).json({
                 data: love,
                 message: 'Yêu thích thành công'
             })
         }
         else {
-            res.status(400).json({
+            return res.status(400).json({
                 message: 'Đã có trong danh sách yêu thích'
             })
         }
@@ -42,13 +35,6 @@ router.delete('/:isbn', Auth.authenGTUser, async (req, res, next) => {
     try {
         const id_readers = Auth.getUserID(req)
         const isbn = req.params.isbn
-
-        // Tài khoản bị khóa
-        // if (acc.account_status != 0) {
-        //     return res.status(403).json({
-        //         message: 'Tài khoản đã bị khóa, không thể thêm bài'
-        //     })
-        // }
 
         const existLove = await Love.hasLove(id_readers, isbn);
         if (existLove) {
@@ -70,16 +56,7 @@ router.delete('/:isbn', Auth.authenGTUser, async (req, res, next) => {
 
 router.get('/ds', Auth.authenAdmin, async (req, res, next) => {
     try {
-        // const id_readers = Auth.getUserID(req)
         const id_readers = 6
-
-
-        // Tài khoản bị khóa
-        // if (acc.account_status != 0) {
-        //     return res.status(403).json({
-        //         message: 'Tài khoản đã bị khóa'
-        //     })
-        // }
 
         const listLoveByReader = await Love.getListLoveDsByReader(id_readers);
         let listDS = []

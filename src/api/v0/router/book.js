@@ -30,6 +30,37 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
+router.get('/search', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+        let books = []
+
+        if (k === '') {
+            data = await Book.getAllBook()
+        } else {
+            data = await Book.getSearchBook(k)
+            if (data.length === 0) {
+                data = await Book.getSearchUnAccentBook(k)
+            }
+        }
+
+        for (let item of data) {
+            item['ds'] = JSON.stringify(await DS.hasDsById(item.isbn))
+            delete item['isbn']
+
+            books = [...books, item]
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.put('/:id_book', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { position } = req.body

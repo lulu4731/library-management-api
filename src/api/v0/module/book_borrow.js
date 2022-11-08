@@ -121,8 +121,8 @@ db.getDsBorrow = () => {
         INNER JOIN book B ON D.isbn = B.isbn
 		Where B.id_status = 0 and B.id_liquidation IS NULL`,
             (err, result) => {
-                if (err) return reject(err);
-                return resolve(result.rows);
+                if (err) return reject(err)
+                return resolve(result.rows)
             });
     });
 }
@@ -156,12 +156,82 @@ db.getBookBorrowByIdReader = (id_readers) => {
         INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow
 		INNER JOIN book B ON BD.id_book = B.id_book
 		INNER JOIN ds DS ON DS.isbn = B.isbn
-		where BB.id_readers = $1 and BD.borrow_status = 0`,
+		where BB.id_readers = $1 and (BD.borrow_status = 0 or BD.borrow_status = 2)`,
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows.map(item => item.isbn));
             });
     });
+}
+
+db.addBookBorrowReader = (id_readers, total_price) => {
+    return new Promise((resolve, reject) => {
+        pool.query("INSERT INTO book_borrow (id_readers, total_price) VALUES ($1, $2) RETURNING *",
+            [id_readers, total_price],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.addBorrowDetailsReader = (borrowDetails) => {
+    return new Promise((resolve, reject) => {
+        pool.query("INSERT INTO borrow_details (id_borrow, id_book, id_librarian_pay, arrival_date, borrow_status) VALUES ($1, $2, NULL, $3, $4) RETURNING *",
+            [borrowDetails.id_borrow, borrowDetails.id_book, borrowDetails.arrival_date, borrowDetails.borrow_status],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.deleteBookBorrow = (id_borrow) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM book_borrow WHERE id_borrow = $1",
+            [id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.updateIdLibrarianBookBorrow = (id_borrow, id_librarian) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE book_borrow SET id_librarian = $1 where id_borrow = $2 RETURNING *`,
+            [id_librarian, id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.getSearchBorrow = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT BB.* FROM book_borrow BB
+        inner join readers R on R.id_readers = BB.id_readers
+        WHERE lower(R.first_name) like lower($1) or lower(R.last_name) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentBorrow = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT BB.* FROM book_borrow BB
+        inner join readers R on R.id_readers = BB.id_readers
+        WHERE lower(unaccent(R.first_name)) like lower($1) or lower(unaccent(R.last_name)) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
 }
 module.exports = db

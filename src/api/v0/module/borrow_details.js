@@ -25,6 +25,17 @@ db.deleteBorrowDetails = (id_borrow) => {
     });
 }
 
+db.updateIdLibrarianBorrowDetails = (status, expired, id_borrow, id_book) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE borrow_details SET borrow_status = $1, expired = $2 where id_book = $3 and id_borrow = $4 RETURNING *`,
+            [status, expired, id_book, id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
 module.exports = db
 
 

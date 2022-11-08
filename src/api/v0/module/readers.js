@@ -3,7 +3,8 @@ db = {}
 
 db.getAllReaders = () => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT *, TO_CHAR(date_of_birth:: date, 'dd/mm/yyyy') as day FROM readers",
+        pool.query(`SELECT R.*, TO_CHAR(R.date_of_birth:: date, 'dd/mm/yyyy') as day, L.hours_lock as hours FROM readers R 
+        left join lock_account L on L.id_readers_lock = R.id_readers`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -119,6 +120,32 @@ db.changeStatus = (id_readers, status) => {
                 return resolve(result.rows[0]);
             })
     });
+}
+
+db.getSearchReaders = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT R.*, L.hours_lock as hours FROM readers R
+        left join lock_account L on L.id_readers_lock = R.id_readers
+        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1)) and role != 1`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentReaders = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT R.*, L.hours_lock as hours FROM readers R
+        left join lock_account L on L.id_readers_lock = R.id_readers
+        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1))) and role != 1`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
 }
 
 module.exports = db

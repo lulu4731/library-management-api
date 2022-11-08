@@ -26,6 +26,7 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
                 delete item['id_readers']
 
                 const details = await BookBorrow.getBorrowDetailsById(item.id_borrow)
+
                 for (let detail of details) {
                     delete detail['id_borrow']
                     detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
@@ -49,7 +50,55 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
-router.get('/ds', Auth.authenAdmin, async (req, res, next) => {
+router.get('/search', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+        let book_borrow = []
+        let borrow_details = []
+
+        if (k === '') {
+            data = await BookBorrow.getAllBookBorrow()
+        } else {
+            data = await BookBorrow.getSearchBorrow(k)
+            if (data.length === 0) {
+                data = await BookBorrow.getSearchUnAccentBorrow(k)
+            }
+        }
+
+        if (data) {
+            for (let item of data) {
+                item['librarian'] = JSON.stringify(await Librarian.hasByLibrarian(item.id_librarian))
+                delete item['id_librarian']
+                item["reader"] = JSON.stringify(await Readers.hasByReadersValue(item.id_readers))
+                delete item['id_readers']
+
+                const details = await BookBorrow.getBorrowDetailsById(item.id_borrow)
+
+                for (let detail of details) {
+                    delete detail['id_borrow']
+                    detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+                    detail['librarian_pay'] = await Librarian.hasByLibrarian(detail.id_librarian_pay)
+                    delete detail['id_librarian_pay']
+                    borrow_details = [...borrow_details, detail]
+                }
+
+                book_borrow = [...book_borrow, item]
+                item['books'] = JSON.stringify(borrow_details)
+                borrow_details = []
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
+router.get('/ds', Auth.authenGTUser, async (req, res, next) => {
     try {
         const data = await BookBorrow.getDsBorrow()
 
@@ -65,7 +114,7 @@ router.get('/ds', Auth.authenAdmin, async (req, res, next) => {
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const id_librarian = Auth.getUserID(req)
-        const { id_readers, books } = req.body;
+        const { id_readers, books } = req.body
         let book_details = []
 
         if (books && id_readers) {
@@ -246,6 +295,46 @@ router.put('/renewal', Auth.authenAdmin, async (req, res, next) => {
 
     } catch (e) {
         res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
+
+
+router.put('/pending', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_librarian = Auth.getUserID(req)
+        const { id_borrow, books, expired } = req.body
+        let book_details = []
+
+        if (id_borrow && books && expired) {
+            await BookBorrow.updateIdLibrarianBookBorrow(id_borrow, id_librarian)
+
+            for (var id_book of books) {
+                const detail = await BorrowDetails.updateIdLibrarianBorrowDetails(0, expired, id_borrow, id_book)
+
+                detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+                book_details = [...book_details, detail]
+            }
+
+            return res.status(200).json({
+                message: "Duyệt thành công",
+                data: {
+                    books: JSON.stringify(book_details),
+                    librarian: JSON.stringify(await Librarian.hasByLibrarian(id_librarian))
+                }
+
+
+            })
+        } else {
+            res.status(400).json({
+                message: 'Thiếu dữ để trả sách'
+            })
+        }
+
+    } catch (e) {
+        return res.status(500).json({
             message: 'Something wrong'
         })
     }
@@ -441,5 +530,89 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
         })
     }
 });
+
+
+router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
+    try {
+        const id_readers = Auth.getUserID(req)
+        const { books, total_price } = req.body
+        let book_details = []
+
+        if (books && id_readers) {
+            const readerBorrowExists = await BookBorrow.hasByReadersBorrow(id_readers)
+
+            if ((readerBorrowExists == 1 && books.length > 2) || (readerBorrowExists == 2 && books.length > 1)) {
+                return res.status(400).json({
+                    message: `Bạn chỉ mượn thêm đượn ${3 - readerBorrowExists} quyển sách nữa thôi nhé!`
+                })
+            }
+            if (readerBorrowExists == 3) {
+                return res.status(400).json({
+                    message: `Bạn đã mượn đủ 3 quyển sách rồi nhé!`
+                })
+            }
+            const readerBorrowBook = await BookBorrow.getBookBorrowByIdReader(id_readers)
+            const filteredArray = books.find(value => readerBorrowBook.includes(value.id_book));
+
+            if (filteredArray !== undefined) {
+                const ds = await DS.hasByDS(filteredArray.id_book)
+                return res.status(400).json({
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
+                })
+            }
+
+            const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
+            if (expiredBorrowExists === 0) {
+
+
+                for (var item of books) {
+                    const book = await Book.getBorrowBook(item.id_book)
+                    if (book) {
+                        const borrow = await BookBorrow.addBookBorrowReader(id_readers, total_price)
+                        const detail = await BookBorrow.addBorrowDetailsReader({ id_book: book.id_book, arrival_date: item.arrival_date, id_borrow: borrow.id_borrow, borrow_status: 2 })
+                        detail['ds'] = await BorrowDetails.getDsBookDetailsById(book.id_book)
+                        await Book.updateStatusBook(1, book.id_book)
+                        book_details = [...book_details, detail]
+
+                        return res.status(201).json({
+                            message: "Lập phiếu mượn thành công",
+                            data: {
+                                id_borrow: borrow.id_borrow,
+                                create_time: borrow.create_time,
+                                reader: JSON.stringify(await Readers.hasByReadersValue(id_readers)),
+                                books: JSON.stringify(book_details)
+                            }
+                        })
+                    } else {
+                        const ds = await DS.hasByDS(item.id_book)
+                        // await BookBorrow.deleteBookBorrow(borrow.id_borrow)
+                        return res.status(400).json({
+                            message: `Quyển sách ${ds.name_book} đã hết sách rồi bạn vui lòng chọn quyển khác!`
+                        })
+                    }
+                }
+
+
+            } else {
+                return res.status(400).json({
+                    message: 'Sách bạn mượn đã quá hạn không thể mượn thêm nữa'
+                })
+            }
+
+
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu để lập phiếu mượn sách'
+            })
+        }
+
+    } catch (e) {
+        res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
+
 
 module.exports = router

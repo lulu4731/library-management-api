@@ -180,4 +180,39 @@ db.deleteDsCompose = (isbn) => {
     });
 }
 
+db.getSearchDS = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT D.* FROM ds D
+        inner join category C on C.id_category = D.id_category
+        inner join publishing_company PC on PC.id_publishing_company = D.id_publishing_company
+        WHERE lower(D.id_title) like lower($1) or lower(D.name_book) like lower($1) or lower(C.name_category) like lower($1) or lower(PC.name_publishing_company) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentDS = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT D.* FROM ds D
+        inner join category C on C.id_category = D.id_category
+        inner join publishing_company PC on PC.id_publishing_company = D.id_publishing_company
+        WHERE lower(unaccent(D.id_title)) like lower(unaccent($1)) or lower(unaccent(name_publishing_company)) like lower(unaccent($1)) or lower(unaccent(C.name_category)) like lower(unaccent($1)) or lower(unaccent(D.name_book)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
 module.exports = db
+
+
+
+// SELECT D.*, (select count(*) from book B where B.isbn = D.isbn and B.id_status = 0 group by D.name_book) as amount_book
+// from ds D
+// inner join category C on C.id_category = D.id_category
+// inner join publishing_company PC on PC.id_publishing_company = D.id_publishing_company

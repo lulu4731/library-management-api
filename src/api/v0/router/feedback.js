@@ -6,10 +6,10 @@ const Feedback = require('../module/feedback')
 router.post('/', Auth.authenGTUser, async (req, res, next) => {
     try {
         const id_readers = Auth.getUserID(req)
-        const { subject, content } = req.body
+        const { subject, content, problem } = req.body
 
-        if (subject && content) {
-            await Feedback.add(id_readers, subject, content)
+        if (subject && content && problem) {
+            await Feedback.add(id_readers, subject, content, problem.value)
 
             return res.status(201).json({
                 message: "Gửi phản hồi thành công"
@@ -37,7 +37,7 @@ router.get('/unread', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
-router.get('/all', Auth.authenAdmin, async (req, res, next) => {
+router.get('/all', Auth.authenLibrarian, async (req, res, next) => {
     try {
         const data = await Feedback.selectAll();
 
@@ -50,7 +50,7 @@ router.get('/all', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
-router.put('/:id_feedback/read', Auth.authenAdmin, async (req, res, next) => {
+router.put('/:id_feedback/read', Auth.authenLibrarian, async (req, res, next) => {
     try {
         const id_feedback = req.params.id_feedback;
         const existFeedback = await Feedback.hasByFeedback(id_feedback)
@@ -60,13 +60,12 @@ router.put('/:id_feedback/read', Auth.authenAdmin, async (req, res, next) => {
                 message: "Không tìm thấy phản hồi"
             })
         } else {
-            await Feedback.updateStatusFeedback(id_feedback, 1);
+            await Feedback.updateStatusFeedback(id_feedback, 1)
             return res.status(200).json({
                 message: "Đánh dấu đã đọc phản hồi thành công!"
             })
         }
     } catch (err) {
-        console.log(err);
         return res.sendStatus(500);
     }
 })

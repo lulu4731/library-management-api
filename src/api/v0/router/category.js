@@ -16,6 +16,32 @@ router.get('/', async (req, res, next) => {
     }
 })
 
+router.get('/search', async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+
+        if (k === '') {
+            data = await Category.getAllCategory()
+            console.log(1)
+        } else {
+            data = await Category.getSearchCategory(k)
+            console.log(2)
+            if (data.length === 0) {
+                data = await Category.getSearchUnAccentCategory(k)
+                console.log(3)
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thể loại thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { name_category } = req.body;

@@ -88,4 +88,28 @@ db.deleteCompany = (id_publishing_company) => {
     });
 }
 
+db.getSearchCompany = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM publishing_company
+        WHERE lower(email) like lower($1) or lower(name_publishing_company) like lower($1) or lower(phone) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentCompany = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM publishing_company
+        WHERE lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(name_publishing_company)) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
 module.exports = db

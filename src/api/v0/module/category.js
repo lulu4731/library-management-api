@@ -65,4 +65,28 @@ db.deleteCategory = (id_category) => {
             })
     });
 }
+
+db.getSearchCategory = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM category
+        WHERE lower(name_category) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentCategory = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM category
+        WHERE lower(unaccent(name_category)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 module.exports = db

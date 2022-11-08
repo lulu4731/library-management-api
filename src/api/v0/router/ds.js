@@ -41,6 +41,58 @@ router.get('/', async (req, res, next) => {
     }
 })
 
+router.get('/search', async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let role = Auth.getUserRole(req)
+        let id_user = Auth.getUserID(req)
+        let listDS = []
+        let data = []
+
+        if (role === 3) {
+            data = await DS.getAllDSByReader(id_user)
+        } else {
+            if (k === '') {
+                data = await DS.getAllDS()
+            } else {
+                data = await DS.getSearchDS(k)
+                if (data.length === 0) {
+                    data = await DS.getSearchUnAccentDS(k)
+                }
+            }
+        }
+
+        if (data) {
+            for (let item of data) {
+                let temps = { ...item }
+                delete temps['id_publishing_company']
+                delete temps['id_category']
+
+                const company = await Company.hasByCompany(item.id_publishing_company)
+                const category = await Category.hasByCategory(item.id_category)
+                const authors = await DS.getAuthorByIdDs(item.isbn)
+                temps['company'] = JSON.stringify(company)
+                temps['category'] = JSON.stringify(category)
+                temps['authors'] = JSON.stringify(authors)
+
+                listDS.push(temps)
+            }
+
+            return res.status(200).json({
+                message: 'Lấy danh sách đầu sách thành công',
+                data: listDS
+            })
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.get('/public', async (req, res, next) => {
     try {
         const ds = await DS.getAllDS()

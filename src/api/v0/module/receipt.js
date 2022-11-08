@@ -66,4 +66,30 @@ db.deleteReceiptDetails = (id_receipt) => {
     });
 }
 
+db.getSearchReceipt = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select R.* from receipt R
+        inner join librarian L on L.id_librarian = R.id_librarian
+        where lower(TO_CHAR(R.create_time:: date, 'yyyy/mm/dd')) like lower($1) or lower(L.first_name) like lower($1) or lower(L.last_name) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentReceipt = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select R.* as day from receipt R
+        inner join librarian L on L.id_librarian = R.id_librarian
+        WHERE lower(unaccent(TO_CHAR(R.create_time:: date, 'yyyy/mm/dd'))) like lower(unaccent($1)) or lower(unaccent(L.first_name)) like lower(unaccent($1)) or lower(unaccent(L.last_name)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
 module.exports = db

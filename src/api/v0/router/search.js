@@ -2,22 +2,35 @@ const express = require('express')
 const router = express.Router()
 const DS = require('../module/ds')
 const Auth = require('../../../middleware/auth')
-const Composed = require('../module/composed')
+const Love = require('../module/love')
 const Company = require('../module/company')
 const Category = require('../module/category')
-const Statistical = require('../module/statistical.js')
 const Search = require('../module/search')
 
-router.get('/', async (req, res, next) => {
+router.get('/', Auth.authenGTUser, async (req, res, next) => {
     try {
-        const { k } = req.query
-        let ds = await Search.getSearch(k)
-
-        if(ds.length === 0){
-            ds = await Search.getSearchUnAccent(k)
-        }
-
+        const { k, c } = req.query
+        const id_readers = Auth.getUserID(req)
+        let ds
         let listDS = []
+
+        if (k === '' && c === 'all') {
+            ds = await DS.getAllDSByReader(id_readers)
+            // console.log(4)
+        } else if (k !== '' && c === 'all') {
+            // console.log(1)
+            ds = await Search.getSearch(k, id_readers)
+            // console.log(ds)
+            if (ds.length === 0) {
+                ds = await Search.getSearchUnAccent(k, id_readers)
+                // console.log('b')
+            }
+        } else if (k === '' && c !== 'all') {
+            // console.log(2)
+            ds = await Search.getSearchCategory(+c, id_readers)
+        } else {
+            ds = await Search.getSearchKeywordAndCategory(k, id_readers, c)
+        }
 
         if (ds) {
             for (let item of ds) {
@@ -37,7 +50,10 @@ router.get('/', async (req, res, next) => {
 
             return res.status(200).json({
                 message: 'Lấy danh sách đầu sách thành công',
-                data: listDS
+                data: {
+                    list: listDS,
+                    amount_love: await Love.getAmountLove(id_readers)
+                }
             })
         }
     } catch (error) {

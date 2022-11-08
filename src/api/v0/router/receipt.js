@@ -43,6 +43,54 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
+router.get('/search', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+        let receipt = []
+        let ds = []
+
+        if (k === '') {
+            data = await Receipt.getAllReceipt()
+            // console.log(1)
+        } else {
+            data = await Receipt.getSearchReceipt(k)
+            // console.log(2)
+            if (data) {
+                data = await Receipt.getSearchUnAccentReceipt(k)
+                // console.log(3)
+            }
+        }
+
+        for (let item of data) {
+            item['librarian'] = JSON.stringify(await Librarian.hasByLibrarian(item.id_librarian))
+
+            const receiptDetails = await Receipt.getReceiptDetailsById(item.id_receipt)
+
+            for (let detail of receiptDetails) {
+                detail['ds'] = await DS.hasDsById(detail.isbn)
+                delete detail['isbn']
+
+                ds = [...ds, detail]
+            }
+
+            item['ds'] = JSON.stringify(ds)
+            delete item['id_librarian']
+
+            receipt = [...receipt, item]
+            ds = []
+
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const id_librarian = Auth.getUserID(req)

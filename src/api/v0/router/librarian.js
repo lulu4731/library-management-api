@@ -50,6 +50,7 @@ const Readers = require('../module/readers')
 router.get('/', Auth.authenLibrarian, async (req, res, next) => {
     try {
         const data = await Librarian.getAllLibrarians()
+        delete data['password']
         return res.status(200).json({
             message: 'Lấy danh sách thủ thư thành công',
             data: data
@@ -58,6 +59,32 @@ router.get('/', Auth.authenLibrarian, async (req, res, next) => {
         return res.status(500).json({
             message: 'Something wrong'
         })
+    }
+})
+
+router.get('/search', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+
+        if (k === '') {
+            data = await Librarian.getAllLibrarians()
+            // console.log(1)
+        } else {
+            data = await Librarian.getSearchLibrarian(k)
+            // console.log(2)
+            if (data) {
+                data = await Librarian.getSearchUnAccentLibrarian(k)
+                // console.log(3)
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
     }
 })
 
@@ -74,6 +101,27 @@ router.post('/', Auth.authenLibrarian, async (req, res, next) => {
             } else {
                 const librarian = { first_name, last_name, address, gender: +gender, email, date_of_birth, phone }
                 const addLibrarian = await Librarian.addLibrarian(librarian)
+
+                let transporter = nodemailer.createTransport({
+                    service: 'hotmail',
+                    auth: {
+                        user: process.env.AUTH_EMAIL,
+                        pass: process.env.AUTH_PASS,
+                    },
+                })
+                await transporter.sendMail({
+                    from: process.env.AUTH_EMAIL,
+                    to: `${email}`,
+                    subject: "Tài khoản thủ thư của bạn đã được tạo thành công",
+                    html: `<h2>Xin chào ${first_name + " " + last_name}</h2>
+                            <h3>Thông tin tài khoản của bạn</h3>
+                            <h3>&emsp;Tài khoản: ${email}</h3>
+                            <h3>&emsp;Mật khẩu: 123456</h3>
+                            <h3>Bạn hãy nhanh chống truy cập vào website để thay đổi mật khẩu</h3>
+                            <h4>Xin cảm ơn</h4>
+                    `,
+                })
+
                 if (addLibrarian) {
                     return res.status(201).json({
                         message: 'Tạo thủ thư thành công',

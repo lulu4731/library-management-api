@@ -66,4 +66,30 @@ db.getBorrowBook = (isbn) => {
     });
 }
 
+
+db.getSearchBook = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT B.* from book B
+        inner join ds D on D.isbn = B.isbn
+        WHERE lower(D.name_book) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentBook = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT B.* from book B
+        inner join ds D on D.isbn = B.isbn
+        WHERE lower(unaccent(D.name_book)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 module.exports = db

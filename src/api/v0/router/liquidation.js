@@ -47,6 +47,55 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
+router.get('/search', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+        let liquidation = []
+
+        if (k === '') {
+            data = await Liquidation.getAllLiquidation()
+            // console.log(1)
+        } else {
+            data = await Liquidation.getSearchLiquidation(k)
+            // console.log(2)
+            if (data.length === 0) {
+                data = await Liquidation.getSearchUnAccentLiquidation(k)
+                // console.log(3)
+            }
+        }
+
+        for (let item of data) {
+            // let books = []
+            item['librarian'] = JSON.stringify(await Librarian.hasByLibrarian(item.id_librarian))
+            delete item['id_librarian']
+            let booksLiquidation = await Liquidation.getBookLiquidationById(item.id_liquidation)
+            let books = []
+
+            for (let item of booksLiquidation) {
+                const book = {}
+                const ds = await DS.hasDsById(item.isbn)
+                book['value'] = item.id_book
+                // console.log(ds)
+                book['label'] = ds.label + " (" + "Mã sách: " + item.id_book + ")"
+
+                books = [...books, book]
+            }
+
+            item['books'] = JSON.stringify(books)
+            liquidation = [...liquidation, item]
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.get('/book', Auth.authenAdmin, async (req, res, next) => {
     try {
         const data = await Liquidation.getBookNotLiquidation()

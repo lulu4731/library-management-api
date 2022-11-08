@@ -66,4 +66,30 @@ db.deleteAuthor = (id_author) => {
     });
 }
 
+db.getSearchAuthor = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM author
+        WHERE lower(first_name) like lower($1) or lower(last_name) like lower($1)`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentAuthor = (keyword) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT * FROM author
+        WHERE lower(unaccent(first_name)) like lower(unaccent($1)) or lower(unaccent(last_name)) like lower(unaccent($1))`,
+            ['%' + keyword + '%'],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
 module.exports = db
+
+// WHERE lower(CONCAT(first_name, ' ', last_name)) like lower($1)

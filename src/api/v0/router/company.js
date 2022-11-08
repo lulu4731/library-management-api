@@ -16,6 +16,32 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
+router.get('/search', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { k } = req.query
+        let data = []
+
+        if (k === '') {
+            data = await Company.getAllCompany()
+            // console.log(1)
+        } else {
+            data = await Company.getSearchCompany(k)
+            // console.log(2)
+            if (data.length === 0) {
+                data = await Company.getSearchUnAccentCompany(k)
+                // console.log(3)
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách thủ thư thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { name_publishing_company, address, phone, email } = req.body;
