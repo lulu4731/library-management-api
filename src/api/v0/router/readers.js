@@ -5,6 +5,7 @@ const BookBorrow = require('../module/book_borrow')
 const Auth = require('../../../middleware/auth')
 const LockAccount = require('../module/lock_account')
 const argon2 = require('argon2')
+const Notification = require('../module/notification')
 
 router.get('/', Auth.authenAdmin, async (req, res, next) => {
     try {
@@ -25,13 +26,21 @@ router.get('/search', Auth.authenAdmin, async (req, res, next) => {
         const { k } = req.query
         let data = []
 
+        const banReaders = await Readers.getReadersBan()
+        for (var item of banReaders) {
+            const checkAccount = await LockAccount.check(item.id_readers)
+            if (checkAccount === true) {
+                await Readers.changeStatus(item.id_readers, 0)
+            }
+        }
+
         if (k === '') {
             data = await Readers.getAllReaders()
             // console.log(1)
         } else {
             data = await Readers.getSearchReaders(k)
             // console.log(2)
-            if (data) {
+            if (data.length === 0) {
                 data = await Readers.getSearchUnAccentReaders(k)
                 // console.log(3)
             }
@@ -132,7 +141,7 @@ router.post('/register', async (req, res, next) => {
     }
 })
 
-router.put('/:id_readers', Auth.authenAdmin, async (req, res, next) => {
+router.put('/:id_readers', Auth.authenGTUser, async (req, res, next) => {
     try {
         const id_readers = req.params.id_readers
         const { first_name, last_name, address, gender, email, date_of_birth, phone, citizen_identification } = req.body;
@@ -263,6 +272,7 @@ router.post('/:id_readers_lock/ban', Auth.authenAdmin, async (req, res, next) =>
 
         if (reason && hours_lock) {
             await LockAccount.add(id_readers_lock, id_librarian_boss, reason, hours_lock)
+            await Notification.addNotification(`Tài khoản của bạn đã bị khóa trong ${hours_lock}`, `Lý do: ${reason}`, 'Nếu có phản ánh hãy phản hồi với thủ thư', id_readers_lock)
             await Readers.changeStatus(id_readers_lock, 1)
 
             return res.status(200).json({
@@ -304,6 +314,7 @@ router.post('/:id_readers_lock/die', Auth.authenAdmin, async (req, res, next) =>
         if (reason) {
             await LockAccount.add(id_readers_lock, id_librarian_boss, reason, 0)
             await Readers.changeStatus(id_readers_lock, 2)
+            await Notification.addNotification(`Tài khoản của bạn đã bị khóa vĩnh viễn`, `Lý do: ${reason}`, 'Nếu có phản ánh hãy phản hồi với thủ thư', id_readers_lock)
 
             return res.status(200).json({
                 message: 'Khóa vĩnh viễn độc giả thành công'
@@ -329,7 +340,8 @@ router.patch('/:id_readers_lock/unlock', Auth.authenAdmin, async (req, res, next
         });
     }
 
-    Readers.changeStatus(id_readers_lock, 0)
+    await Notification.addNotification(`Mở khóa tài khoản`, `Tài khoản của bạn đã được mở khóa giờ đây bạn có thể bình luận, lập phiếu mượn`, 'Mở khóa tài khoản', id_readers_lock)
+    await Readers.changeStatus(id_readers_lock, 0)
 
     return res.status(200).json({
         message: 'Mở khóa tài khoản thành công'

@@ -6,7 +6,10 @@ const Auth = require('../../../middleware/auth')
 const argon2 = require('argon2')
 const nodemailer = require("nodemailer");
 const Readers = require('../module/readers')
-
+const Book = require('../module/book')
+const BookBorrow = require('../module/book_borrow')
+const BorrowDetails = require('../module/borrow_details')
+const LockAccount = require('../module/lock_account')
 // router.post('/login', async (req, res, next) => {
 //     try {
 //         const { email, password } = req.body
@@ -221,6 +224,14 @@ router.post('/login', async (req, res, next) => {
             })
         }
 
+        const banReaders = await Readers.getReadersBan()
+        for (var item of banReaders) {
+            const checkAccount = await LockAccount.check(item.id_readers)
+            if (checkAccount === true) {
+                await Readers.changeStatus(item.id_readers, 0)
+            }
+        }
+
         const existLibrarian = await Librarian.hasByEmail(email)
         const existReader = await Readers.hasEmail(email)
 
@@ -234,7 +245,9 @@ router.post('/login', async (req, res, next) => {
                     role: librarian.role
                 }
 
-                const accessToken = jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `15d` });
+                const accessToken = jwt.sign(data, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `15d` })
+
+
                 return res.status(200).json({
                     message: 'Đăng nhập thành công',
                     accessToken: accessToken
@@ -284,7 +297,42 @@ router.get('/information', Auth.authenGTUser, async (req, res, next) => {
     try {
         const id_user = Auth.getUserID(req)
         const role = Auth.getUserRole(req)
-        const data = role == 3 ? await Readers.hasByReaders(id_user) : await Librarian.hasByLibrarian(id_user)
+        let data
+        // const data = role == 3 ? await Readers.hasByReaders(id_user) : await Librarian.hasByLibrarian(id_user)
+        if (role === 3) {
+            data = { ...data }
+            data = await Readers.hasByReaders(id_user)
+            const dataBorrow = await BookBorrow.getBookBorrowById(id_user)
+            let book_borrow = []
+            let borrow_details = []
+
+            if (dataBorrow) {
+                for (let item of dataBorrow) {
+                    item['librarian'] = JSON.stringify(await Librarian.hasByLibrarian(item.id_librarian))
+                    delete item['id_librarian']
+                    item["reader"] = JSON.stringify(await Readers.hasByReadersValue(item.id_readers))
+                    delete item['id_readers']
+
+                    const details = await BookBorrow.getBorrowDetailsById(item.id_borrow)
+
+                    for (let detail of details) {
+                        delete detail['id_borrow']
+                        detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+                        detail['librarian_pay'] = await Librarian.hasByLibrarian(detail.id_librarian_pay)
+                        delete detail['id_librarian_pay']
+                        borrow_details = [...borrow_details, detail]
+                    }
+
+                    book_borrow = [...book_borrow, item]
+                    item['books'] = JSON.stringify(borrow_details)
+                    borrow_details = []
+                }
+            }
+            data['borrow'] = dataBorrow
+        } else {
+            data = await Librarian.hasByLibrarian(id_user)
+            data['borrow'] = []
+        }
         return res.status(200).json({
             message: 'Lấy user thành công',
             data: data
@@ -446,18 +494,37 @@ router.post('/forget/change', async (req, res) => {
     }
 })
 
-router.put('/change/password', Auth.authenAdmin, async (req, res, next) => {
+router.put('/change/password', Auth.authenGTUser, async (req, res, next) => {
     try {
         let new_pass = req.body.new_pass
         let old_pass = req.body.old_pass
         const id_librarian = Auth.getUserID(req)
+        let role = Auth.getUserRole(req)
 
-        if (old_pass !== "") {
-            const existLibrarian = await Librarian.hasLibrarianById(id_librarian)
-            const isPasswordValid = await argon2.verify(existLibrarian.password, old_pass)
+        if (old_pass !== "" && new_pass !== "") {
+            if (role === 3) {
+                const existReaders = await Readers.hasByReadersById(id_librarian)
+                const isPasswordValid = await argon2.verify(existReaders.password, old_pass)
 
-            if (isPasswordValid) {
-                if (new_pass !== "") {
+                if (isPasswordValid) {
+                    const hashedPassword = await argon2.hash(new_pass)
+                    await Readers.updatePasswordReaders(id_librarian, hashedPassword)
+
+                    return res.status(200).json({
+                        message: 'Thay đổi mật khẩu thành công',
+                    })
+
+                } else {
+                    return res.status(403).json({
+                        message: 'Mật khẩu cũ không chính xác!'
+                    })
+
+                }
+            } else {
+                const existLibrarian = await Librarian.hasLibrarianById(id_librarian)
+                const isPasswordValid = await argon2.verify(existLibrarian.password, old_pass)
+
+                if (isPasswordValid) {
                     const hashedPassword = await argon2.hash(new_pass)
                     await Librarian.updatePassword(id_librarian, hashedPassword)
 
@@ -466,20 +533,15 @@ router.put('/change/password', Auth.authenAdmin, async (req, res, next) => {
                     })
 
                 } else {
-                    return res.status(400).json({
-                        message: 'Mật khẩu mới không được bỏ trống'
-                    });
+                    return res.status(403).json({
+                        message: 'Mật khẩu cũ không chính xác!'
+                    })
+
                 }
-            } else {
-                return res.status(403).json({
-                    message: 'Mật khẩu cũ không chính xác!'
-                })
-
             }
-
         } else {
             return res.status(400).json({
-                message: 'Thiếu mật khẩu cũ!'
+                message: 'Thiếu dữ liệu cập nhật mật khẩu!'
             })
         }
     } catch (err) {

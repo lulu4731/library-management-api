@@ -3,8 +3,11 @@ db = {}
 
 db.getAllReaders = () => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT R.*, TO_CHAR(R.date_of_birth:: date, 'dd/mm/yyyy') as day, L.hours_lock as hours FROM readers R 
-        left join lock_account L on L.id_readers_lock = R.id_readers`,
+        pool.query(`select R.*,TO_CHAR(R.date_of_birth:: date, 'dd/mm/yyyy') as day, (SELECT hours_lock
+            FROM lock_account 
+            WHERE id_readers_lock = R.id_readers
+            ORDER BY time_end_lock DESC 
+            LIMIT 1) as hours from readers R`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -58,13 +61,35 @@ db.addReaderRegister = (reader) => {
 
 db.hasByReaders = (id_readers) => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT id_readers, email, citizen_identification, readers_status, role, first_name, last_name FROM readers WHERE id_readers = $1",
+        pool.query("SELECT id_readers, email, citizen_identification, readers_status, role, first_name, last_name, address, gender, email, date_of_birth, citizen_identification, phone, img FROM readers WHERE id_readers = $1",
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);
             })
     });
+}
+
+db.hasByReadersById = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query("SELECT * FROM readers WHERE id_readers = $1",
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    });
+}
+
+db.updatePasswordReaders = (id_readers, password) => {
+    return new Promise((resolve, reject) => {
+        pool.query("UPDATE readers SET password=$1 WHERE id_readers=$2",
+            [password, id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            })
+    })
 }
 
 db.selectByEmailReader = (email) => {
@@ -122,9 +147,19 @@ db.changeStatus = (id_readers, status) => {
     });
 }
 
+db.getReadersBan = () => {
+    return new Promise((resolve, reject) => {
+        pool.query("select * from readers where readers_status = 1",
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    });
+}
+
 db.getSearchReaders = (keyword) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT R.*, L.hours_lock as hours FROM readers R
+        pool.query(`SELECT distinct R.*, L.hours_lock as hours FROM readers R
         left join lock_account L on L.id_readers_lock = R.id_readers
         WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1)) and role != 1`,
             ['%' + keyword + '%'],
@@ -137,7 +172,7 @@ db.getSearchReaders = (keyword) => {
 
 db.getSearchUnAccentReaders = (keyword) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT R.*, L.hours_lock as hours FROM readers R
+        pool.query(`SELECT distinct R.*, L.hours_lock as hours FROM readers R
         left join lock_account L on L.id_readers_lock = R.id_readers
         WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1))) and role != 1`,
             ['%' + keyword + '%'],

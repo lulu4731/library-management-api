@@ -111,6 +111,17 @@ db.getComment = (id_cmt) => {
             })
     })
 }
+
+db.getAllComment = () => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT distinct D.* FROM comment C
+        inner join ds D on D.isbn = C.isbn`,
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 module.exports = db
 
 

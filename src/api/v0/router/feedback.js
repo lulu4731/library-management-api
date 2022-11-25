@@ -50,6 +50,26 @@ router.get('/all', Auth.authenLibrarian, async (req, res, next) => {
     }
 })
 
+router.get('/search', Auth.authenLibrarian, async (req, res, next) => {
+    try {
+        const { s, e, p } = req.query
+        let data = []
+
+        if (p === 'All') {
+            data = await Feedback.selectAll(s, e)
+        } else {
+            data = await Feedback.selectProblemDay(s, e, p)
+        }
+
+        return res.status(200).json({
+            message: 'Lấy danh sách phản hồi thành công',
+            data: data
+        })
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 router.put('/:id_feedback/read', Auth.authenLibrarian, async (req, res, next) => {
     try {
         const id_feedback = req.params.id_feedback;

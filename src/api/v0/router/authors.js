@@ -26,11 +26,10 @@ router.get('/search', Auth.authenAdmin, async (req, res, next) => {
             // console.log(1)
         } else {
             data = await Author.getSearchAuthor(k)
-            console.log(data)
+            // console.log(data)
             // console.log(2)
             if (data.length === 0) {
                 data = await Author.getSearchUnAccentAuthor(k)
-                console.log(3)
             }
         }
 

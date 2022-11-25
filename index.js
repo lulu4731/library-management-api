@@ -45,6 +45,7 @@ app.use(`${apiUrl}/ds`, require('./src/api/v0/router/comment'))
 app.use(`${apiUrl}/love`, require('./src/api/v0/router/love'))
 app.use(`${apiUrl}/feedback`, require('./src/api/v0/router/feedback'))
 app.use(`${apiUrl}/payment`, require('./src/api/v0/router/payment'))
+app.use(`${apiUrl}/notification`, require('./src/api/v0/router/notification'))
 
 
 

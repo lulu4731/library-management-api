@@ -13,7 +13,7 @@ db.getAllDS = () => {
 
 db.getAllDSByReader = (id_readers) => {
     return new Promise((resolve, reject) => {
-        pool.query(`select D.*, (select exists(select * from love L where D.isbn = L.isbn and L.id_readers = $1)) as love_status
+        pool.query(`select D.*, (select exists(select * from love L where D.isbn = L.isbn and L.id_readers = $1)) as love_status, (select count(*) from book B where B.isbn = D.isbn and B.id_status = 0 group by D.name_book) as amount_book
         from ds D 
         order by D.isbn`,
             [id_readers],

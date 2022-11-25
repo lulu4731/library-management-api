@@ -23,13 +23,10 @@ router.get('/search', async (req, res, next) => {
 
         if (k === '') {
             data = await Category.getAllCategory()
-            console.log(1)
         } else {
             data = await Category.getSearchCategory(k)
-            console.log(2)
             if (data.length === 0) {
                 data = await Category.getSearchUnAccentCategory(k)
-                console.log(3)
             }
         }
 

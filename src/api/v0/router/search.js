@@ -30,6 +30,9 @@ router.get('/', Auth.authenGTUser, async (req, res, next) => {
             ds = await Search.getSearchCategory(+c, id_readers)
         } else {
             ds = await Search.getSearchKeywordAndCategory(k, id_readers, c)
+            if (ds.length === 0) {
+                ds = await Search.getSearchKeywordAndCategoryUnAccent(k, id_readers, c)
+            }
         }
 
         if (ds) {
@@ -48,11 +51,33 @@ router.get('/', Auth.authenGTUser, async (req, res, next) => {
                 listDS.push(temps)
             }
 
+            const listLoveByReader = await Love.getListLoveDsByReader(id_readers);
+            let listLove = []
+
+            if (listLoveByReader) {
+                for (let item of listLoveByReader) {
+                    let temps = { ...item }
+                    delete temps['id_publishing_company']
+                    delete temps['id_category']
+
+                    const company = await Company.hasByCompany(item.id_publishing_company)
+                    const category = await Category.hasByCategory(item.id_category)
+                    const authors = await DS.getAuthorByIdDs(item.isbn)
+                    temps['company'] = JSON.stringify(company)
+                    temps['category'] = JSON.stringify(category)
+                    temps['authors'] = JSON.stringify(authors)
+                    temps['love_status'] = true
+
+                    listLove.push(temps)
+                }
+            }
+
             return res.status(200).json({
                 message: 'Lấy danh sách đầu sách thành công',
                 data: {
                     list: listDS,
-                    amount_love: await Love.getAmountLove(id_readers)
+                    amount_love: await Love.getAmountLove(id_readers),
+                    listLove: listLove
                 }
             })
         }
@@ -60,5 +85,6 @@ router.get('/', Auth.authenGTUser, async (req, res, next) => {
         return res.sendStatus(500);
     }
 })
+
 
 module.exports = router

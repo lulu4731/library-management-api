@@ -54,9 +54,9 @@ router.delete('/:isbn', Auth.authenGTUser, async (req, res, next) => {
     }
 })
 
-router.get('/ds', Auth.authenAdmin, async (req, res, next) => {
+router.get('/ds', Auth.authenGTUser, async (req, res, next) => {
     try {
-        const id_readers = 6
+        const id_readers = Auth.getUserID(req)
 
         const listLoveByReader = await Love.getListLoveDsByReader(id_readers);
         let listDS = []

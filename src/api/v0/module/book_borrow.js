@@ -93,7 +93,7 @@ db.hasByReadersBorrow = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT * FROM book_borrow BB
         INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow
-		where BB.id_readers = $1 and BD.borrow_status = 0`,
+		where BB.id_readers = $1 and (BD.borrow_status = 0 or BD.borrow_status = 2)`,
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
@@ -213,7 +213,7 @@ db.getSearchBorrow = (keyword) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT BB.* FROM book_borrow BB
         inner join readers R on R.id_readers = BB.id_readers
-        WHERE lower(R.first_name) like lower($1) or lower(R.last_name) like lower($1)`,
+        WHERE lower(CONCAT(R.first_name, ' ', R.last_name)) like lower($1) or lower(R.email) like lower($1)`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);
@@ -226,12 +226,25 @@ db.getSearchUnAccentBorrow = (keyword) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT BB.* FROM book_borrow BB
         inner join readers R on R.id_readers = BB.id_readers
-        WHERE lower(unaccent(R.first_name)) like lower($1) or lower(unaccent(R.last_name)) like lower($1)`,
+        WHERE lower(unaccent(CONCAT(R.first_name, ' ', R.last_name))) like lower(unaccent($1)) or lower(R.email) like lower($1)`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
             })
     })
+}
+
+db.getBookBorrowById = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT distinct BB.* FROM book_borrow BB
+        INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow 
+        where BB.id_readers = $1 and (BD.borrow_status = 0 or BD.borrow_status = 2)`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
 }
 module.exports = db

@@ -87,7 +87,8 @@ db.getNameReader = () => {
 
 db.getReaderBorrowExpired = () => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  FROM borrow_details BD
+        pool.query(`SELECT distinct CONCAT(R.first_name, ' ', R.last_name) as name_reader, BD.expired, (CURRENT_TIMESTAMP + '1 days'::interval - BD.expired) as day, R.phone  
+        FROM borrow_details BD
         INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
        INNER JOIN readers R ON R.id_readers = BB.id_readers
        where BD.expired < CURRENT_TIMESTAMP and BD.borrow_status = 0`,
@@ -185,16 +186,32 @@ db.getStatisticalBookByDate = () => {
     });
 }
 
+// db.getTopBookByWeek = () => {
+//     return new Promise((resolve, reject) => {
+//         pool.query(`SELECT DS.name_book, count(*) as amount_book FROM book B
+//         INNER JOIN ds DS ON DS.isbn = B.isbn
+//         INNER JOIN borrow_details BD ON BD.id_book = B.id_book
+// 		INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+// 		where BB.create_time:: date BETWEEN date_trunc('week', CURRENT_TIMESTAMP::timestamp)::date AND (date_trunc('week', CURRENT_TIMESTAMP::timestamp)+ '6 days'::interval)::date
+//         GROUP BY DS.name_book
+//         ORDER BY amount_book DESC
+// 		LIMIT 5`,
+//             (err, result) => {
+//                 if (err) return reject(err);
+//                 return resolve(result.rows);
+//             });
+//     });
+// }
 db.getTopBookByWeek = () => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT DS.name_book, count(*) as amount_book FROM book B
-        INNER JOIN ds DS ON DS.isbn = B.isbn
+        pool.query(`SELECT DS.name_book, (select count(*) from book B
         INNER JOIN borrow_details BD ON BD.id_book = B.id_book
-		INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
-		where BB.create_time:: date BETWEEN date_trunc('week', CURRENT_TIMESTAMP::timestamp)::date AND (date_trunc('week', CURRENT_TIMESTAMP::timestamp)+ '6 days'::interval)::date
-        GROUP BY DS.name_book
-        ORDER BY amount_book DESC
-		LIMIT 5`,
+        INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+        where BB.create_time:: date BETWEEN date_trunc('week', CURRENT_TIMESTAMP::timestamp)::date 
+        AND (date_trunc('week', CURRENT_TIMESTAMP::timestamp)+ '6 days'::interval)::date and DS.isbn = B.isbn) as amount_book 
+        from ds DS
+    ORDER BY amount_book DESC
+    LIMIT 5`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -204,14 +221,14 @@ db.getTopBookByWeek = () => {
 
 db.getTopBookByMonth = () => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT DS.name_book, count(*) as amount_book FROM book B
-        INNER JOIN ds DS ON DS.isbn = B.isbn
+        pool.query(`SELECT DS.name_book, (select count(*) from book B
         INNER JOIN borrow_details BD ON BD.id_book = B.id_book
-		INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
-		where BB.create_time:: date BETWEEN date_trunc('month', CURRENT_TIMESTAMP::timestamp)::date AND (date_trunc('month', CURRENT_TIMESTAMP::timestamp)+ INTERVAL '1 MONTH - 1 day')::date
-        GROUP BY DS.name_book
-        ORDER BY amount_book DESC
-		LIMIT 5`,
+        INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+        where BB.create_time:: date BETWEEN date_trunc('month', CURRENT_TIMESTAMP::timestamp)::date 
+        AND (date_trunc('month', CURRENT_TIMESTAMP::timestamp)+ INTERVAL '1 MONTH - 1 day')::date and DS.isbn = B.isbn) as amount_book 
+        from ds DS
+    ORDER BY amount_book DESC
+    LIMIT 5`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
