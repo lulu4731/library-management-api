@@ -375,13 +375,6 @@ router.post('/forget/password', async (req, res) => {
                 },
             });
 
-            // await transporter.verify((error, success) => {
-            //     if (error) {
-            //         console.log('a')
-            //     } else {
-            //         console.log('b')
-            //     }
-            // })
             await transporter.sendMail({
                 from: process.env.AUTH_EMAIL, // sender address
                 to: `${email}`, // list of receivers

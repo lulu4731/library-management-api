@@ -79,7 +79,7 @@ router.put('/:id_category', Auth.authenAdmin, async (req, res, next) => {
             const oldCategory = await Category.hasByCategory(id_category)
 
             if (oldCategory) {
-                if (oldCategory.name_category !== name_category) {
+                if (oldCategory.label !== name_category) {
                     let nameExists = await Category.hasName(name_category)
                     if (nameExists) {
                         return res.status(400).json({

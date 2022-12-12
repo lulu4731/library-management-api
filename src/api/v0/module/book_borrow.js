@@ -3,7 +3,13 @@ db = {}
 
 db.getAllBookBorrow = () => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT * FROM book_borrow",
+        pool.query(`SELECT distinct *
+        from (
+            select BB.*
+            from book_borrow BB
+            inner join borrow_details BD on BB.id_borrow = BD.id_borrow
+            order by (BD.borrow_status = 3 or BD.borrow_status = 0) DESC
+        ) as tmp`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -115,9 +121,21 @@ db.hasByExpiredBorrow = (id_readers) => {
     });
 }
 
+// db.getDsBorrow = () => {
+//     return new Promise((resolve, reject) => {
+//         pool.query(`SELECT DISTINCT  D.isbn as value, D.name_book as label FROM ds D
+//         INNER JOIN book B ON D.isbn = B.isbn
+// 		Where B.id_status = 0 and B.id_liquidation IS NULL`,
+//             (err, result) => {
+//                 if (err) return reject(err)
+//                 return resolve(result.rows)
+//             });
+//     });
+// }
+
 db.getDsBorrow = () => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT DISTINCT  D.isbn as value, D.name_book as label FROM ds D
+        pool.query(`SELECT DISTINCT D.isbn as value, D.name_book as label, D.price FROM ds D
         INNER JOIN book B ON D.isbn = B.isbn
 		Where B.id_status = 0 and B.id_liquidation IS NULL`,
             (err, result) => {
@@ -235,6 +253,45 @@ db.getSearchUnAccentBorrow = (keyword) => {
     })
 }
 
+db.getSearchBorrowStatus = (status) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`With temps as (SELECT BB.*, EXISTS( select * from borrow_details BD where BD.id_borrow = BB.id_borrow and BD.borrow_status = $1) AS valid FROM book_borrow BB)
+        select * from temps where valid = true`,
+            [status],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchBorrowStatusKeyword = (keyword, status) => {
+    return new Promise((resolve, reject) => {
+            pool.query(`With temps as (SELECT BB.*, EXISTS( select * from borrow_details BD where BD.id_borrow = BB.id_borrow and BD.borrow_status = $2) AS valid FROM book_borrow BB)
+            select T.* from temps T
+            inner join readers R on R.id_readers = T.id_readers
+            WHERE valid = true and (lower(CONCAT(R.first_name, ' ', R.last_name)) like lower($1) or lower(R.email) like lower($1))`,
+            ['%' + keyword + '%', status],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
+
+db.getSearchUnAccentBorrowStatus = (keyword, status) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`With temps as (SELECT BB.*, EXISTS( select * from borrow_details BD where BD.id_borrow = BB.id_borrow and BD.borrow_status = $2) AS valid FROM book_borrow BB)
+        select T.* from temps T
+        inner join readers R on R.id_readers = T.id_readers
+           WHERE valid = true and (lower(unaccent(CONCAT(R.first_name, ' ', R.last_name))) like lower(unaccent($1)) or lower(R.email) like lower($1))`,
+            ['%' + keyword + '%', status],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            })
+    })
+}
 db.getBookBorrowById = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT distinct BB.* FROM book_borrow BB

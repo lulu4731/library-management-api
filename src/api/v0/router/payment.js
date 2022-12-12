@@ -24,7 +24,7 @@ const getLinkPayment = (amount, name_reader) => {
     return new Promise(resolve => {
         var orderInfo = `Thanh toán hóa đơn mượn sách của độc giả ${name_reader}`
         var rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType
-
+        var data = ''
 
         var signature = crypto.createHmac('sha256', secretkey).update(rawSignature).digest('hex')
 
@@ -57,15 +57,24 @@ const getLinkPayment = (amount, name_reader) => {
         const req = https.request(options, res => {
             // console.log(`Status: ${res.statusCode}`)
             res.setEncoding('utf8');
-            if (res.statusCode === 200) {
-                res.on('data', (body) => {
-                    resolve(body && JSON.parse(body).payUrl)
-                })
-            } else {
-                resolve(null)
-            }
+            // if (res.statusCode === 200) {
+            res.on('data', (body) => {
+                // resolve(body && JSON.parse(body).payUrl)
+                data += body
+            })
+            // } else {
+            //     resolve(null)
+            // }
             res.on('end', () => {
-                // console.log('No more data in response.');
+                if (res.statusCode === 200) {
+                    try {
+                        if (data != '') {
+                            resolve(data && JSON.parse(data).payUrl)
+                        }
+                    } catch (error) {
+                        console.log(error)
+                    }
+                }
             })
         })
 
@@ -113,7 +122,8 @@ router.post('/', Auth.authenGTUser, async (req, res, next) => {
             if (filteredArray !== undefined) {
                 const ds = await DS.hasByDS(filteredArray.id_book)
                 return res.status(400).json({
-                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`,
+                    data: ds
                 })
             }
             for (var item of books) {
@@ -130,7 +140,7 @@ router.post('/', Auth.authenGTUser, async (req, res, next) => {
             if (expiredBorrowExists === 0) {
                 const link = await getLinkPayment(amount, name_reader)
 
-                if (link !== null) {
+                if (link) {
                     return res.status(200).json({
                         link
                     })

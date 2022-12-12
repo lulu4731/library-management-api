@@ -159,9 +159,12 @@ db.getReadersBan = () => {
 
 db.getSearchReaders = (keyword) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT distinct R.*, L.hours_lock as hours FROM readers R
-        left join lock_account L on L.id_readers_lock = R.id_readers
-        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1)) and role != 1`,
+        pool.query(`SELECT distinct R.*, (SELECT LA.hours_lock
+            FROM lock_account LA
+            WHERE LA.id_readers_lock = R.id_readers
+            ORDER BY LA.time_end_lock DESC LIMIT 1) as hours 
+        FROM readers R
+        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1))`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);
@@ -172,9 +175,12 @@ db.getSearchReaders = (keyword) => {
 
 db.getSearchUnAccentReaders = (keyword) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT distinct R.*, L.hours_lock as hours FROM readers R
-        left join lock_account L on L.id_readers_lock = R.id_readers
-        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1))) and role != 1`,
+        pool.query(`SELECT distinct R.*, (SELECT LA.hours_lock
+            FROM lock_account LA
+            WHERE LA.id_readers_lock = R.id_readers
+            ORDER BY LA.time_end_lock DESC LIMIT 1) as hours 
+        FROM readers R
+        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1)))`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);

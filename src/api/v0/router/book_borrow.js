@@ -56,20 +56,37 @@ router.get('/', Auth.authenAdmin, async (req, res, next) => {
 
 router.get('/search', Auth.authenAdmin, async (req, res, next) => {
     try {
-        const { k } = req.query
+        const { k, c } = req.query
         let data = []
         let book_borrow = []
         let borrow_details = []
 
-        if (k === '') {
+        // if (k === '') {
+        //     data = await BookBorrow.getAllBookBorrow()
+        // } else {
+        //     data = await BookBorrow.getSearchBorrow(k)
+        //     if (data.length === 0) {
+        //         data = await BookBorrow.getSearchUnAccentBorrow(k)
+        //     }
+        // }
+
+        if (k === '' && c === 'all') {
             data = await BookBorrow.getAllBookBorrow()
-        } else {
+        } else if (k !== '' && c === 'all') {
             data = await BookBorrow.getSearchBorrow(k)
             if (data.length === 0) {
                 data = await BookBorrow.getSearchUnAccentBorrow(k)
             }
+        } else if (k === '' && c !== 'all') {
+            data = await BookBorrow.getSearchBorrowStatus(c)
+        } else {
+            data = await BookBorrow.getSearchBorrowStatusKeyword(k, +c)
+            if (data.length === 0) {
+                data = await BookBorrow.getSearchUnAccentBorrowStatus(k, +c)
+            }
         }
 
+        // console.log(data)
         if (data) {
             for (let item of data) {
                 item['librarian'] = JSON.stringify(await Librarian.hasByLibrarian(item.id_librarian))
@@ -337,33 +354,33 @@ router.put('/pending', Auth.authenAdmin, async (req, res, next) => {
 
             const reader = await Readers.hasByReadersById(bookBorrow.id_readers)
 
-            let transporter = nodemailer.createTransport({
-                service: 'hotmail',
-                auth: {
-                    user: process.env.AUTH_EMAIL,
-                    pass: process.env.AUTH_PASS,
-                },
-            })
-            await transporter.sendMail({
-                from: process.env.AUTH_EMAIL,
-                to: `${reader.email}`,
-                subject: "Ban quản lý thư viện đã duyệt phiếu mượn sách của bạn",
-                html: `<h2>Xin chào ${reader.first_name + " " + reader.last_name}</h2>
-                        <h3>Thông tin phiếu mượn sách: </h3>
-                        <h3>&emsp;Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}</h3>
-                        <h3>&emsp;Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}</h3>
-                        <h3>&emsp;Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}</h3>
-                        <h3>Bạn hãy đến nhận sách đúng với thời gian thông báo của chúng tôi.</h3>
-                        <h3>Xin cảm ơn</h3>
-                `,
-            })
-            await Notification.addNotification(`Phiếu mượn của bạn đã được duyệt`,
-                `Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}.
-                     Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}.
-                     Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}.`,
-                'Duyệt phiếu mượn từ thủ thư',
-                bookBorrow.id_readers
-            )
+            // let transporter = nodemailer.createTransport({
+            //     service: 'hotmail',
+            //     auth: {
+            //         user: process.env.AUTH_EMAIL,
+            //         pass: process.env.AUTH_PASS,
+            //     },
+            // })
+            // await transporter.sendMail({
+            //     from: process.env.AUTH_EMAIL,
+            //     to: `${reader.email}`,
+            //     subject: "Ban quản lý thư viện đã duyệt phiếu mượn sách của bạn",
+            //     html: `<h2>Xin chào ${reader.first_name + " " + reader.last_name}</h2>
+            //             <h3>Thông tin phiếu mượn sách: </h3>
+            //             <h3>&emsp;Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}</h3>
+            //             <h3>&emsp;Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}</h3>
+            //             <h3>&emsp;Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}</h3>
+            //             <h3>Bạn hãy đến nhận sách đúng với thời gian thông báo của chúng tôi.</h3>
+            //             <h3>Xin cảm ơn</h3>
+            //     `,
+            // })
+            // await Notification.addNotification(`Phiếu mượn của bạn đã được duyệt`,
+            //     `Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}.
+            //          Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}.
+            //          Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}.`,
+            //     'Duyệt phiếu mượn từ thủ thư',
+            //     bookBorrow.id_readers
+            // )
 
             // console.log(moment(book_details[0].expired).format('DD-MM-YYYY'));
 
@@ -617,7 +634,9 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
             if (filteredArray !== undefined) {
                 const ds = await DS.hasByDS(filteredArray.id_book)
                 return res.status(400).json({
-                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`,
+                    code: 400,
+                    data: ds
                 })
             }
 
@@ -636,6 +655,7 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
             const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
             if (expiredBorrowExists === 0) {
                 const borrow = await BookBorrow.addBookBorrowReader(id_readers, total_price)
+                console.log(borrow)
 
                 for (var item of books) {
                     const book = await Book.getBorrowBook(item.id_book)
@@ -650,6 +670,7 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
                     message: "Lập phiếu mượn thành công",
                     data: {
                         id_borrow: borrow.id_borrow,
+                        total_price: borrow.total_price,
                         create_time: borrow.create_time,
                         reader: JSON.stringify(await Readers.hasByReadersValue(id_readers)),
                         books: JSON.stringify(book_details)
