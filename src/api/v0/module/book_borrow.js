@@ -28,10 +28,10 @@ db.getBorrowDetailsById = (id_borrow) => {
     });
 }
 
-db.addBookBorrow = (id_readers, id_librarian) => {
+db.addBookBorrow = (id_readers, id_librarian, total_price) => {
     return new Promise((resolve, reject) => {
-        pool.query("INSERT INTO book_borrow (id_readers, id_librarian) VALUES ($1, $2) RETURNING *",
-            [id_readers, id_librarian],
+        pool.query("INSERT INTO book_borrow (id_readers, id_librarian, total_price) VALUES ($1, $2, $3) RETURNING *",
+            [id_readers, id_librarian, total_price],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

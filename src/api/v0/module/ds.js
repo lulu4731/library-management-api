@@ -94,7 +94,7 @@ db.updateDS = (ds) => {
 
 db.hasByDS = (isbn) => {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT isbn, name_book FROM ds WHERE isbn = $1",
+        pool.query("SELECT isbn, name_book, price FROM ds WHERE isbn = $1",
             [isbn],
             (err, result) => {
                 if (err) return reject(err);

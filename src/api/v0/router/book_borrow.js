@@ -135,7 +135,7 @@ router.get('/ds', Auth.authenGTUser, async (req, res, next) => {
 router.post('/', Auth.authenAdmin, async (req, res, next) => {
     try {
         const id_librarian = Auth.getUserID(req)
-        const { id_readers, books } = req.body
+        const { id_readers, books, total_price } = req.body
         let book_details = []
 
         const checkAccount = await LockAccount.checkStatusAccount(id_readers)
@@ -172,14 +172,15 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
             if (filteredArray !== undefined) {
                 const ds = await DS.hasByDS(filteredArray.id_book)
                 return res.status(400).json({
-                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`
+                    message: `Quyển sách ${ds.name_book} bạn đã mượn rồi không được mượn nữa!`,
+                    data: ds
                 })
             }
 
             const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
             if (expiredBorrowExists === 0) {
 
-                const borrow = await BookBorrow.addBookBorrow(id_readers, id_librarian)
+                const borrow = await BookBorrow.addBookBorrow(id_readers, id_librarian, total_price)
 
                 for (var item of books) {
                     const book = await Book.getBorrowBook(item.id_book)
@@ -198,7 +199,8 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                         create_time: borrow.create_time,
                         librarian: JSON.stringify(await Librarian.hasByLibrarian(id_librarian)),
                         reader: JSON.stringify(await Readers.hasByReadersValue(id_readers)),
-                        books: JSON.stringify(book_details)
+                        books: JSON.stringify(book_details),
+                        total_price
                     }
                 })
             } else {
@@ -655,7 +657,7 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
             const expiredBorrowExists = await BookBorrow.hasByExpiredBorrow(id_readers)
             if (expiredBorrowExists === 0) {
                 const borrow = await BookBorrow.addBookBorrowReader(id_readers, total_price)
-                console.log(borrow)
+                // console.log(borrow)
 
                 for (var item of books) {
                     const book = await Book.getBorrowBook(item.id_book)
