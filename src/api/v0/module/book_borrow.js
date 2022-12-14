@@ -304,4 +304,15 @@ db.getBookBorrowById = (id_readers) => {
             });
     });
 }
+
+db.updateTotalPriceLost = (price, id_borrow) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE book_borrow SET total_price_lost = total_price_lost + $1 where id_borrow = $2`,
+            [price, id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
 module.exports = db

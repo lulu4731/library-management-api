@@ -36,6 +36,21 @@ db.updateIdLibrarianBorrowDetails = (status, expired, id_borrow, id_book, arriva
     });
 }
 
+db.getPriceDsById = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select RD.price from receipt_details RD
+        inner join receipt R on R.id_receipt = RD.id_receipt 
+        where RD.isbn = $1
+        order by R.create_time DESC
+        LIMIT 1`,
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0].price);
+            });
+    });
+}
+
 module.exports = db
 
 

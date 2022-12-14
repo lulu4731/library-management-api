@@ -259,7 +259,45 @@ router.put('/return-book', Auth.authenAdmin, async (req, res, next) => {
             message: 'Something wrong'
         })
     }
-});
+})
+
+router.put('/lost-book', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_librarian = Auth.getUserID(req)
+        const { id_borrow, id_book } = req.body
+
+        if (id_borrow && id_book) {
+
+            const detail = await BookBorrow.updateBorrowDetails({ id_librarian_pay: id_librarian, borrow_status: 3, id_book, id_borrow })
+            detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+            await Book.updateStatusBook(2, detail.id_book)
+            const price = await BorrowDetails.getPriceDsById(detail.ds.value)
+            await BookBorrow.updateTotalPriceLost(+price, id_borrow)
+
+
+            detail['librarian_pay'] = await Librarian.hasByLibrarian(id_librarian)
+            delete detail['id_librarian_pay']
+
+            return res.status(200).json({
+                message: "Đánh dấu mất sách thành công",
+                data: detail,
+                total_price_lost: price
+            })
+        }
+
+
+        else {
+            res.status(400).json({
+                message: 'Thiếu dữ để mất sách'
+            })
+        }
+
+    } catch (e) {
+        res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
 
 router.put('/return-book/all', Auth.authenAdmin, async (req, res, next) => {
     try {

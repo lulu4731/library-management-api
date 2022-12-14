@@ -317,4 +317,30 @@ router.post('/librarian', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
+router.post('/lost-book', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const { amount, name_reader } = req.body
+
+        if (amount && name_reader) {
+            const link = await getLinkPaymentLibrarian(amount, name_reader)
+
+            if (link) {
+                return res.status(200).json({
+                    link
+                })
+            } else {
+                return res.status(400).json({
+                    message: "Lỗi server Momo"
+                })
+            }
+        } else {
+            return res.status(400).json({
+                message: 'Thiếu dữ liệu thanh toán'
+            })
+        }
+    } catch (error) {
+        return res.sendStatus(500);
+    }
+})
+
 module.exports = router;
