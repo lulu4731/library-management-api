@@ -22,13 +22,13 @@ db.addBook = (isbn) => {
     });
 }
 
-db.deleteBook = (isbn) => {
+db.deleteBook = (id_book) => {
     return new Promise((resolve, reject) => {
-        pool.query("DELETE FROM book WHERE isbn = $1 and id_status = 0",
-            [isbn],
+        pool.query("DELETE FROM book WHERE id_book = $1 and id_status = 0 and id_liquidation is null",
+            [id_book],
             (err, result) => {
                 if (err) return reject(err);
-                return resolve(result.rows[0].id_book);
+                return resolve(result.rows[0]);
             });
     });
 }
@@ -62,6 +62,17 @@ db.getBorrowBook = (isbn) => {
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.getReceiptBook = (isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("select id_book from book where isbn = $1 and id_status = 0 and id_liquidation is null",
+            [isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
             });
     });
 }

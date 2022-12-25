@@ -151,6 +151,13 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
             }
         }
 
+        const checkLostBook = await BookBorrow.checkPayLost(id_readers)
+        if(checkLostBook){
+            return res.status(400).json({
+                message: 'Bạn chưa thanh toán tiền mất sách.'
+            })
+        }
+
         if (books && id_readers) {
             const readerBorrowExists = await BookBorrow.hasByReadersBorrow(id_readers)
 
@@ -200,8 +207,10 @@ router.post('/', Auth.authenAdmin, async (req, res, next) => {
                         librarian: JSON.stringify(await Librarian.hasByLibrarian(id_librarian)),
                         reader: JSON.stringify(await Readers.hasByReadersValue(id_readers)),
                         books: JSON.stringify(book_details),
-                        total_price
-                    }
+                        total_price: total_price,
+                        total_price_lost: 0
+                    },
+                    code: 201
                 })
             } else {
                 res.status(400).json({
@@ -299,6 +308,30 @@ router.put('/lost-book', Auth.authenAdmin, async (req, res, next) => {
     }
 })
 
+router.patch('/pay-lost-book/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_borrow = req.params.id_borrow
+
+        if (id_borrow) {
+            await BookBorrow.payLostBook(id_borrow)
+
+            return res.status(200).json({
+                message: "Thanh toán làm mất sách thành công",
+            })
+        }
+        else {
+            res.status(400).json({
+                message: 'Thiếu dữ để mất sách'
+            })
+        }
+
+    } catch (e) {
+        res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+})
+
 router.put('/return-book/all', Auth.authenAdmin, async (req, res, next) => {
     try {
         const id_librarian = Auth.getUserID(req)
@@ -347,7 +380,7 @@ router.put('/renewal', Auth.authenGTUser, async (req, res, next) => {
         if (id_borrow && id_book && expired) {
 
             const detail = await BookBorrow.updateBorrowDetailsExpiredAndNumberRenewal({ number_renewal: 1, expired, id_book, id_borrow })
-            detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+            detail['ds'] = await BorrowDetails.getDsBorrowReaderProfile(detail.id_book)
             detail['librarian_pay'] = await Librarian.hasByLibrarian(detail.id_librarian_pay)
             delete detail['id_librarian_pay']
             // book_details = [...book_details, detail]
@@ -386,13 +419,13 @@ router.put('/pending', Auth.authenAdmin, async (req, res, next) => {
             const bookBorrow = await BookBorrow.updateIdLibrarianBookBorrow(id_borrow, id_librarian)
 
             for (var id_book of books) {
-                const detail = await BorrowDetails.updateIdLibrarianBorrowDetails(0, expired, id_borrow, id_book, arrival_date)
+                const detail = await BorrowDetails.updateIdLibrarianBorrowDetails(4, expired, id_borrow, id_book, arrival_date)
 
                 detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
                 book_details = [...book_details, detail]
             }
 
-            const reader = await Readers.hasByReadersById(bookBorrow.id_readers)
+            // const reader = await Readers.hasByReadersById(bookBorrow.id_readers)
 
             // let transporter = nodemailer.createTransport({
             //     service: 'hotmail',
@@ -414,15 +447,53 @@ router.put('/pending', Auth.authenAdmin, async (req, res, next) => {
             //             <h3>Xin cảm ơn</h3>
             //     `,
             // })
-            // await Notification.addNotification(`Phiếu mượn của bạn đã được duyệt`,
-            //     `Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}.
-            //          Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}.
-            //          Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}.`,
-            //     'Duyệt phiếu mượn từ thủ thư',
-            //     bookBorrow.id_readers
-            // )
+            await Notification.addNotification(`Phiếu mượn của bạn đã được duyệt`,
+                `Các quyển sách mượn: ${book_details.map((item) => item.ds.label + " ")}.
+                     Ngày đến nhận sách: ${moment(book_details[0].arrival_date).format('DD-MM-YYYY')}.
+                     Ngày trả sách: ${moment(book_details[0].expired).format('DD-MM-YYYY')}.`,
+                'Duyệt phiếu mượn từ thủ thư',
+                bookBorrow.id_readers
+            )
 
             // console.log(moment(book_details[0].expired).format('DD-MM-YYYY'));
+
+            return res.status(200).json({
+                message: "Duyệt thành công",
+                data: {
+                    books: JSON.stringify(book_details),
+                    librarian: JSON.stringify(await Librarian.hasByLibrarian(id_librarian))
+                }
+
+
+            })
+        } else {
+            res.status(400).json({
+                message: 'Thiếu dữ để trả sách'
+            })
+        }
+
+    } catch (e) {
+        return res.status(500).json({
+            message: 'Something wrong'
+        })
+    }
+});
+
+router.put('/approved', Auth.authenAdmin, async (req, res, next) => {
+    try {
+        const id_librarian = Auth.getUserID(req)
+        const { id_borrow, books } = req.body
+        let book_details = []
+
+        if (id_borrow && books) {
+            await BookBorrow.updateIdLibrarianBookBorrow(id_borrow, id_librarian)
+
+            for (var id_book of books) {
+                const detail = await BorrowDetails.updateBorrowDetailsApproved(0, id_borrow, id_book)
+
+                detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+                book_details = [...book_details, detail]
+            }
 
             return res.status(200).json({
                 message: "Duyệt thành công",
@@ -614,7 +685,8 @@ router.put('/:id_borrow', Auth.authenAdmin, async (req, res, next) => {
                     create_time: borrow.create_time,
                     librarian: JSON.stringify(await Librarian.hasByLibrarian(id_librarian)),
                     reader: JSON.stringify(await Readers.hasByReadersValue(id_readers)),
-                    books: JSON.stringify(book_details)
+                    books: JSON.stringify(book_details),
+                    total_price: borrow.total_price
                 }
             })
             // } else {
@@ -652,6 +724,13 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
         } else if (checkAccount.status === 1 && checkAccount.valid === false) {
             return res.status(400).json({
                 message: `Tài khoản của bạn đã bị khóa trong ${checkAccount.hours_lock}`
+            })
+        }
+
+        const checkLostBook = await BookBorrow.checkPayLost(id_readers)
+        if(checkLostBook){
+            return res.status(400).json({
+                message: 'Bạn chưa thanh toán tiền mất sách.'
             })
         }
 
@@ -701,7 +780,7 @@ router.post('/reader', Auth.authenGTUser, async (req, res, next) => {
                     const book = await Book.getBorrowBook(item.id_book)
                     if (book) {
                         const detail = await BookBorrow.addBorrowDetailsReader({ id_book: book.id_book, arrival_date: item.arrival_date, id_borrow: borrow.id_borrow, borrow_status: 2 })
-                        detail['ds'] = await BorrowDetails.getDsBookDetailsById(book.id_book)
+                        detail['ds'] = await BorrowDetails.getDsBorrowReaderProfile(book.id_book)
                         await Book.updateStatusBook(1, book.id_book)
                         book_details = [...book_details, detail]
                     }

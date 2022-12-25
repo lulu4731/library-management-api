@@ -33,10 +33,10 @@ db.addReceipt = (id_librarian) => {
     });
 }
 
-db.updateReceipt = (id_librarian) => {
+db.updateReceipt = (id_librarian, id_receipt) => {
     return new Promise((resolve, reject) => {
         pool.query("UPDATE receipt SET id_librarian = $1, create_time = timezone('Asia/Ho_Chi_Minh'::text, now()) where id_receipt = $2 RETURNING *",
-            [id_librarian],
+            [id_librarian, id_receipt],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);
@@ -55,10 +55,21 @@ db.addReceiptDetails = (receiptDetails) => {
     });
 }
 
-db.deleteReceiptDetails = (id_receipt) => {
+db.updateReceiptDetails = (receiptDetails) => {
     return new Promise((resolve, reject) => {
-        pool.query("DELETE FROM receipt_details WHERE id_receipt = $1",
-            [id_receipt],
+        pool.query("UPDATE receipt_details SET number_book = $1, price = $2 where id_receipt = $3 and isbn = $4 RETURNING *",
+            [receiptDetails.number_book, receiptDetails.price, receiptDetails.id_receipt, receiptDetails.isbn],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.deleteReceiptDetails = (id_receipt, isbn) => {
+    return new Promise((resolve, reject) => {
+        pool.query("DELETE FROM receipt_details WHERE id_receipt = $1 and isbn = $2",
+            [id_receipt, isbn],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

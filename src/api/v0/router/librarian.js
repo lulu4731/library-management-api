@@ -105,25 +105,25 @@ router.post('/', Auth.authenLibrarian, async (req, res, next) => {
                 const librarian = { first_name, last_name, address, gender: +gender, email, date_of_birth, phone }
                 const addLibrarian = await Librarian.addLibrarian(librarian)
 
-                let transporter = nodemailer.createTransport({
-                    service: 'hotmail',
-                    auth: {
-                        user: process.env.AUTH_EMAIL,
-                        pass: process.env.AUTH_PASS,
-                    },
-                })
-                await transporter.sendMail({
-                    from: process.env.AUTH_EMAIL,
-                    to: `${email}`,
-                    subject: "Tài khoản thủ thư của bạn đã được tạo thành công",
-                    html: `<h2>Xin chào ${first_name + " " + last_name}</h2>
-                            <h3>Thông tin tài khoản của bạn</h3>
-                            <h3>&emsp;Tài khoản: ${email}</h3>
-                            <h3>&emsp;Mật khẩu: 123456</h3>
-                            <h3>Bạn hãy nhanh chống truy cập vào website để thay đổi mật khẩu</h3>
-                            <h4>Xin cảm ơn</h4>
-                    `,
-                })
+                // let transporter = nodemailer.createTransport({
+                //     service: 'hotmail',
+                //     auth: {
+                //         user: process.env.AUTH_EMAIL,
+                //         pass: process.env.AUTH_PASS,
+                //     },
+                // })
+                // await transporter.sendMail({
+                //     from: process.env.AUTH_EMAIL,
+                //     to: `${email}`,
+                //     subject: "Tài khoản thủ thư của bạn đã được tạo thành công",
+                //     html: `<h2>Xin chào ${first_name + " " + last_name}</h2>
+                //             <h3>Thông tin tài khoản của bạn</h3>
+                //             <h3>&emsp;Tài khoản: ${email}</h3>
+                //             <h3>&emsp;Mật khẩu: 123456</h3>
+                //             <h3>Bạn hãy nhanh chống truy cập vào website để thay đổi mật khẩu</h3>
+                //             <h4>Xin cảm ơn</h4>
+                //     `,
+                // })
 
                 if (addLibrarian) {
                     return res.status(201).json({
@@ -317,7 +317,7 @@ router.get('/information', Auth.authenGTUser, async (req, res, next) => {
 
                     for (let detail of details) {
                         delete detail['id_borrow']
-                        detail['ds'] = await BorrowDetails.getDsBookDetailsById(detail.id_book)
+                        detail['ds'] = await BorrowDetails.getDsBorrowReaderProfile(detail.id_book)
                         detail['librarian_pay'] = await Librarian.hasByLibrarian(detail.id_librarian_pay)
                         delete detail['id_librarian_pay']
                         borrow_details = [...borrow_details, detail]
@@ -355,6 +355,7 @@ router.post('/forget/password', async (req, res) => {
         const { email } = req.body
         const code = createCode()
         const existLibrarian = await Librarian.selectByEmail(email)
+        const existReader = await Readers.selectByEmailReader(email)
 
         if (!email) {
             return res.status(400).json({
@@ -362,7 +363,7 @@ router.post('/forget/password', async (req, res) => {
             });
         }
 
-        if (!existLibrarian) {
+        if (!existLibrarian && !existReader) {
             return res.status(404).json({
                 message: 'Không tồn tại email này'
             });
@@ -373,25 +374,44 @@ router.post('/forget/password', async (req, res) => {
                     user: process.env.AUTH_EMAIL, // generated ethereal user
                     pass: process.env.AUTH_PASS, // generated ethereal password
                 },
-            });
-
-            await transporter.sendMail({
-                from: process.env.AUTH_EMAIL, // sender address
-                to: `${email}`, // list of receivers
-                subject: "Lấy lại mật khẩu Quản lý thư viện", // Subject line
-                html: `<h3><b>Xin chào ${existLibrarian.first_name + " " + existLibrarian.last_name}</b></h3>
-                        <p>Đây là mã code của bạn:</p>
-                        <h2>&emsp;Code: ${code}</h2>
-                        <p>Quản lý thư viện</p>
-                `, // html body
             })
 
-            const isId = await Librarian.isHasIdVerification(existLibrarian.id_librarian)
+            if (existLibrarian) {
+                await transporter.sendMail({
+                    from: process.env.AUTH_EMAIL, // sender address
+                    to: `${email}`, // list of receivers
+                    subject: "Lấy lại mật khẩu website Quản lý thư viện", // Subject line
+                    html: `<h3><b>Hello ${existLibrarian.first_name + " " + existLibrarian.last_name}</b></h3>
+                        <p>Mã code của bạn là:</p>
+                        <h2>&emsp;Code: ${code}</h2>
+                `, // html body
+                })
 
-            if (isId) {
-                await Librarian.updateVerification(existLibrarian.id_librarian, code)
+                const isId = await Librarian.isHasIdVerification(existLibrarian.id_librarian)
+
+                if (isId) {
+                    await Librarian.updateVerification(existLibrarian.id_librarian, code)
+                } else {
+                    await Librarian.insertVerification(existLibrarian.id_librarian, code)
+                }
             } else {
-                await Librarian.insertVerification(existLibrarian.id_librarian, code)
+                await transporter.sendMail({
+                    from: process.env.AUTH_EMAIL, // sender address
+                    to: `${email}`, // list of receivers
+                    subject: "Lấy lại mật khẩu website Quản lý thư viện", // Subject line
+                    html: `<h3><b>Hello ${existReader.first_name + " " + existReader.last_name}</b></h3>
+                        <p>Mã code của bạn là:</p>
+                        <h2>&emsp;Code: ${code}</h2>
+                `, // html body
+                })
+
+                const isId = await Librarian.isHasIdVerification(existReader.id_readers)
+
+                if (isId) {
+                    await Librarian.updateVerification(existReader.id_readers, code)
+                } else {
+                    await Librarian.insertVerification(existReader.id_readers, code)
+                }
             }
 
             return res.status(200).json({

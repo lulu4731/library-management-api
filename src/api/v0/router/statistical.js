@@ -100,31 +100,33 @@ router.get('/tk', Auth.authenAdmin, async (req, res, next) => {
 router.post('/tk', Auth.authenAdmin, async (req, res, next) => {
     try {
         const { startDate, endDate } = req.body
+
         const data = await Statistical.getTKDate(startDate, endDate)
+        const categoryTK = await Statistical.getCategoryOrderByNameCategory(startDate, endDate)
+        // console.log(categoryTK)
+        // console.log(categoryTK)
 
-        const categoryOrderByBook = await Statistical.getCategoryOrderByCategory()
+        // const categoryOrderByBook = await Statistical.getCategoryOrderByCategory()
 
-        const category = await Statistical.getCategory()
-        const categoryTK = [...new Set(categoryOrderByBook.map(item => item.name_category)), ...new Set(category.map(item => item.name_category))]
+        // const category = await Statistical.getCategory()
+        // const categoryTK = [...new Set(categoryOrderByBook.map(item => item.name_category)), ...new Set(category.map(item => item.name_category))]
 
-        const a = [...data, ...category]
+        // const a = [...data, ...category]
 
-        let myArrayWithNoDuplicates = a.reduce(function (accumulator, element) {
-            if (!accumulator.find((item => item.isbn === element.isbn))) {
-                accumulator.push(element)
-            }
-            return accumulator
-        }, [])
+        // let myArrayWithNoDuplicates = a.reduce(function (accumulator, element) {
+        //     if (!accumulator.find((item => item.isbn === element.isbn))) {
+        //         accumulator.push(element)
+        //     }
+        //     return accumulator
+        // }, [])
 
         let list = []
 
-        for (let i of new Set(categoryTK)) {
+        for (let i of new Set(categoryTK.map(item => item.name_category))) {
             list.push(i)
-            for (let j of myArrayWithNoDuplicates) {
+            for (let j of data) {
                 if (i === j.name_category) {
                     list.push(j)
-                } else {
-
                 }
             }
         }

@@ -30,17 +30,32 @@ db.getTK = () => {
             });
     });
 }
-
+// db.getTKDate = (startDate, endDate) => {
+//     return new Promise((resolve, reject) => {
+//         pool.query(`SELECT DS.name_book, DS.isbn, C.name_category, count(*) as amount_book FROM book B
+//         INNER JOIN ds DS ON DS.isbn = B.isbn
+//         INNER JOIN category C ON DS.id_category = C.id_category
+//          INNER JOIN borrow_details BD ON BD.id_book = B.id_book
+// 		 INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
+// 		 where BB.create_time::date BETWEEN $1::timestamp AND $2::timestamp
+//           GROUP BY DS.name_book, DS.isbn, C.name_category
+//           ORDER BY amount_book DESC`,
+//             [startDate, endDate],
+//             (err, result) => {
+//                 if (err) return reject(err);
+//                 return resolve(result.rows);
+//             });
+//     });
+// }
 db.getTKDate = (startDate, endDate) => {
     return new Promise((resolve, reject) => {
-        pool.query(`SELECT DS.name_book, DS.isbn, C.name_category, count(*) as amount_book FROM book B
-        INNER JOIN ds DS ON DS.isbn = B.isbn
-        INNER JOIN category C ON DS.id_category = C.id_category
-         INNER JOIN borrow_details BD ON BD.id_book = B.id_book
-		 INNER JOIN book_borrow BB ON BB.id_borrow = BD.id_borrow
-		 where BB.create_time::date BETWEEN $1::timestamp AND $2::timestamp
-          GROUP BY DS.name_book, DS.isbn, C.name_category
-          ORDER BY amount_book DESC`,
+        pool.query(`With temps as (select BD.* from borrow_details BD inner join book_borrow BB ON BB.id_borrow = BD.id_borrow where BB.create_time::date BETWEEN $1::timestamp AND $2::timestamp)
+                select B.isbn, ds.name_book, C.name_category, count(BD.id_borrow) as amount_book from book B 
+                LEFT join temps BD ON B.id_book = BD.id_book
+                INNER JOIN ds DS ON DS.isbn = B.isbn
+                INNER JOIN category C ON DS.id_category = C.id_category
+                GROUP BY DS.name_book, B.isbn, C.name_category
+                ORDER BY amount_book DESC`,
             [startDate, endDate],
             (err, result) => {
                 if (err) return reject(err);
@@ -68,6 +83,24 @@ db.getCategoryOrderByCategory = () => {
          INNER JOIN borrow_details BD ON BD.id_book = B.id_book
           GROUP BY C.name_category
           ORDER BY amount_book DESC`,
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
+db.getCategoryOrderByNameCategory = (startDate, endDate) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`
+        With temps as (select BD.* from borrow_details BD inner join book_borrow BB ON BB.id_borrow = BD.id_borrow where BB.create_time::date BETWEEN $1::timestamp AND $2::timestamp)
+        SELECT C.name_category, count(BD.id_borrow) as amount_book FROM book B
+        INNER JOIN ds DS ON DS.isbn = B.isbn
+        INNER JOIN category C ON DS.id_category = C.id_category
+         left JOIN temps BD ON BD.id_book = B.id_book
+          GROUP BY C.name_category
+          ORDER BY amount_book DESC`,
+            [startDate, endDate],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);

@@ -267,7 +267,7 @@ db.getSearchBorrowStatus = (status) => {
 
 db.getSearchBorrowStatusKeyword = (keyword, status) => {
     return new Promise((resolve, reject) => {
-            pool.query(`With temps as (SELECT BB.*, EXISTS( select * from borrow_details BD where BD.id_borrow = BB.id_borrow and BD.borrow_status = $2) AS valid FROM book_borrow BB)
+        pool.query(`With temps as (SELECT BB.*, EXISTS( select * from borrow_details BD where BD.id_borrow = BB.id_borrow and BD.borrow_status = $2) AS valid FROM book_borrow BB)
             select T.* from temps T
             inner join readers R on R.id_readers = T.id_readers
             WHERE valid = true and (lower(CONCAT(R.first_name, ' ', R.last_name)) like lower($1) or lower(R.email) like lower($1))`,
@@ -296,7 +296,20 @@ db.getBookBorrowById = (id_readers) => {
     return new Promise((resolve, reject) => {
         pool.query(`SELECT distinct BB.* FROM book_borrow BB
         INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow 
-        where BB.id_readers = $1 and (BD.borrow_status = 0 or BD.borrow_status = 2)`,
+        where BB.id_readers = $1`,
+            [id_readers],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows);
+            });
+    });
+}
+
+db.getBookBorrowByIdSuccess = (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT distinct BB.* FROM book_borrow BB
+        INNER JOIN borrow_details BD ON BB.id_borrow = BD.id_borrow 
+        where BB.id_readers = 39 and (BD.borrow_status != 0 or BD.borrow_status != 2 or BD.borrow_status != 4)`,
             [id_readers],
             (err, result) => {
                 if (err) return reject(err);
@@ -309,6 +322,28 @@ db.updateTotalPriceLost = (price, id_borrow) => {
     return new Promise((resolve, reject) => {
         pool.query(`UPDATE book_borrow SET total_price_lost = total_price_lost + $1 where id_borrow = $2`,
             [price, id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.payLostBook = (id_borrow) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE book_borrow SET total_price_lost = 0 where id_borrow = $1`,
+            [id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.checkPayLost= (id_readers) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`select total_price_lost from book_borrow where id_readers = $1 and total_price_lost > 0`,
+            [id_readers],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

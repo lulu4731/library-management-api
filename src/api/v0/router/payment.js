@@ -104,6 +104,13 @@ router.post('/', Auth.authenGTUser, async (req, res, next) => {
             }
         }
 
+        const checkLostBook = await BookBorrow.checkPayLost(id_readers)
+        if(checkLostBook){
+            return res.status(400).json({
+                message: 'Bạn chưa thanh toán tiền mất sách.'
+            })
+        }
+
         if (amount) {
             const readerBorrowExists = await BookBorrow.hasByReadersBorrow(id_readers)
             if ((readerBorrowExists == 1 && books.length > 2) || (readerBorrowExists == 2 && books.length > 1)) {
@@ -255,6 +262,13 @@ router.post('/librarian', Auth.authenAdmin, async (req, res, next) => {
                     message: `Tài khoản của ${name_reader} đã bị khóa trong ${checkAccount.hours_lock}`
                 })
             }
+        }
+
+        const checkLostBook = await BookBorrow.checkPayLost(id_readers)
+        if(checkLostBook){
+            return res.status(400).json({
+                message: 'Bạn chưa thanh toán tiền mất sách.'
+            })
         }
 
         if (amount) {

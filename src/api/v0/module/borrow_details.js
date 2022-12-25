@@ -14,6 +14,32 @@ db.getDsBookDetailsById = (id_book) => {
     });
 }
 
+db.getDsBorrowReaderProfile = (id_book) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT D.isbn as value, D.name_book as label, D.img FROM ds D
+        INNER JOIN book B ON D.isbn = B.isbn
+        WHERE B.id_book = $1`,
+            [id_book],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.getDsBorrowImg = (id_book) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`SELECT D.img FROM ds D
+        INNER JOIN book B ON D.isbn = B.isbn
+        WHERE B.id_book = $1`,
+            [id_book],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0].img);
+            });
+    });
+}
+
 db.deleteBorrowDetails = (id_borrow) => {
     return new Promise((resolve, reject) => {
         pool.query(`DELETE FROM borrow_details WHERE id_borrow = $1`,
@@ -29,6 +55,17 @@ db.updateIdLibrarianBorrowDetails = (status, expired, id_borrow, id_book, arriva
     return new Promise((resolve, reject) => {
         pool.query(`UPDATE borrow_details SET borrow_status = $1, expired = $2, arrival_date = $3 where id_book = $4 and id_borrow = $5 RETURNING *`,
             [status, expired, arrival_date, id_book, id_borrow],
+            (err, result) => {
+                if (err) return reject(err);
+                return resolve(result.rows[0]);
+            });
+    });
+}
+
+db.updateBorrowDetailsApproved = (status, id_borrow, id_book) => {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE borrow_details SET borrow_status = $1 where id_book = $2 and id_borrow = $3 RETURNING *`,
+            [status, id_book, id_borrow],
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows[0]);

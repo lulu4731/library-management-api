@@ -7,7 +7,7 @@ db.getAllReaders = () => {
             FROM lock_account 
             WHERE id_readers_lock = R.id_readers
             ORDER BY time_end_lock DESC 
-            LIMIT 1) as hours from readers R`,
+            LIMIT 1) as hours from readers R ORDER BY R.readers_status DESC`,
             (err, result) => {
                 if (err) return reject(err);
                 return resolve(result.rows);
@@ -164,7 +164,8 @@ db.getSearchReaders = (keyword) => {
             WHERE LA.id_readers_lock = R.id_readers
             ORDER BY LA.time_end_lock DESC LIMIT 1) as hours 
         FROM readers R
-        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1))`,
+        WHERE (lower(email) like lower($1) or lower(CONCAT(first_name, ' ', last_name)) like lower($1) or lower(phone) like lower($1)) 
+        ORDER BY R.readers_status DESC`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);
@@ -180,7 +181,8 @@ db.getSearchUnAccentReaders = (keyword) => {
             WHERE LA.id_readers_lock = R.id_readers
             ORDER BY LA.time_end_lock DESC LIMIT 1) as hours 
         FROM readers R
-        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1)))`,
+        WHERE (lower(unaccent(email)) like lower(unaccent($1)) or lower(unaccent(CONCAT(first_name, ' ', last_name))) like lower(unaccent($1)) or lower(unaccent(phone)) like lower(unaccent($1)))
+        ORDER BY R.readers_status DESC`,
             ['%' + keyword + '%'],
             (err, result) => {
                 if (err) return reject(err);
